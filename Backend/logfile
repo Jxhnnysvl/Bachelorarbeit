@@ -1,0 +1,63 @@
+2025-07-09 14:03:59.721 CEST [17180] LOG:  PostgreSQL 16.9, compiled by Visual C++ build 1944, 64-bit startet
+2025-07-09 14:03:59.726 CEST [17180] LOG:  erwarte Verbindungen auf IPv6-Adresse ª::1´, Port 5432
+2025-07-09 14:03:59.726 CEST [17180] LOG:  erwarte Verbindungen auf IPv4-Adresse ª127.0.0.1´, Port 5432
+2025-07-09 14:03:59.774 CEST [14216] LOG:  Datenbanksystem wurde am 2025-07-09 14:02:04 CEST heruntergefahren
+2025-07-09 14:03:59.817 CEST [17180] LOG:  Datenbanksystem ist bereit, um Verbindungen anzunehmen
+2025-07-09 14:06:42.845 CEST [8704] FEHLER:  Syntaxfehler bei ª)´ bei Zeichen 93
+2025-07-09 14:06:42.845 CEST [8704] ANWEISUNG:  
+	        SELECT anlage, detail, wert, timestamp
+	        FROM daten
+	        WHERE anlage IN ()
+	          AND detail IN ()
+	          AND timestamp BETWEEN NULL AND NULL
+	        ORDER BY timestamp
+	    
+2025-07-09 14:08:42.006 CEST [7636] FEHLER:  Syntaxfehler bei ª)´ bei Zeichen 93
+2025-07-09 14:08:42.006 CEST [7636] ANWEISUNG:  
+	        SELECT anlage, detail, wert, timestamp
+	        FROM daten
+	        WHERE anlage IN ()
+	          AND detail IN ()
+	          AND timestamp BETWEEN '2025-06-20T00:00' AND '2025-06-21T00:00'
+	        ORDER BY timestamp
+	    
+2025-07-09 14:08:59.878 CEST [20928] LOG:  Checkpoint beginnt: time
+2025-07-09 14:09:00.021 CEST [20928] LOG:  Checkpoint komplett: 4 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugef¸gt, 0 entfernt, 0 wiederverwendet; Schreiben=0,117 s, Sync=0,003 s, gesamt=0,145 s; sync. Dateien=3, l‰ngste=0,002 s, Durchschnitt=0.001 s; Entfernung=0 kB, Sch‰tzung=0 kB; LSN=0/1A38E00, Redo-LSN=0/1A38DC8
+2025-07-09 14:10:06.792 CEST [7636] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2025-07-09 14:10:06.792 CEST [8704] LOG:  konnte Daten vom Client nicht empfangen: An existing connection was forcibly closed by the remote host.
+	
+2025-07-09 14:10:46.797 CEST [17180] LOG:  schnelles Herunterfahren verlangt
+2025-07-09 14:10:46.799 CEST [24448] FEHLER:  storniere Anfrage wegen Benutzeraufforderung
+2025-07-09 14:10:46.816 CEST [17180] LOG:  etwaige aktive Transaktionen werden abgebrochen
+2025-07-09 14:10:46.817 CEST [17180] LOG:  Background-Worker ªlogical replication launcher´ (PID 24448) beendete mit Status 1
+2025-07-09 14:10:46.823 CEST [20928] LOG:  fahre herunter
+2025-07-09 14:10:46.825 CEST [20928] LOG:  Checkpoint beginnt: shutdown immediate
+2025-07-09 14:10:46.833 CEST [20928] LOG:  Checkpoint komplett: 0 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugef¸gt, 0 entfernt, 0 wiederverwendet; Schreiben=0,001 s, Sync=0,001 s, gesamt=0,010 s; sync. Dateien=0, l‰ngste=0,000 s, Durchschnitt=0.000 s; Entfernung=0 kB, Sch‰tzung=0 kB; LSN=0/1A38EB0, Redo-LSN=0/1A38EB0
+2025-07-09 14:10:46.845 CEST [17180] LOG:  Datenbanksystem ist heruntergefahren
+2025-07-09 14:16:49.446 CEST [7008] LOG:  PostgreSQL 16.9, compiled by Visual C++ build 1944, 64-bit startet
+2025-07-09 14:16:49.452 CEST [7008] LOG:  erwarte Verbindungen auf IPv6-Adresse ª::1´, Port 5432
+2025-07-09 14:16:49.453 CEST [7008] LOG:  erwarte Verbindungen auf IPv4-Adresse ª127.0.0.1´, Port 5432
+2025-07-09 14:16:49.511 CEST [21996] LOG:  Datenbanksystem wurde am 2025-07-09 14:10:46 CEST heruntergefahren
+2025-07-09 14:16:49.538 CEST [7008] LOG:  Datenbanksystem ist bereit, um Verbindungen anzunehmen
+2025-07-09 14:21:45.668 CEST [26088] FATAL:  Rolle ªJohnnyG¸nther´ existiert nicht
+2025-07-09 14:21:49.627 CEST [20760] LOG:  Checkpoint beginnt: time
+2025-07-09 14:21:49.655 CEST [20760] LOG:  Checkpoint komplett: 3 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugef¸gt, 0 entfernt, 0 wiederverwendet; Schreiben=0,003 s, Sync=0,002 s, gesamt=0,029 s; sync. Dateien=2, l‰ngste=0,001 s, Durchschnitt=0.001 s; Entfernung=0 kB, Sch‰tzung=0 kB; LSN=0/1A38F98, Redo-LSN=0/1A38F60
+2025-07-09 14:24:39.019 CEST [23040] FEHLER:  Syntaxfehler bei ªROLE´ bei Zeichen 8
+2025-07-09 14:24:39.019 CEST [23040] ANWEISUNG:  DELETE ROLE "JohnnyGÅnther"#
+	DELETE ROLE "JohnnyGÅnther"
+	DROP ROLE "JohnnyGÅnther";
+2025-07-09 14:26:49.662 CEST [20760] LOG:  Checkpoint beginnt: time
+2025-07-09 14:26:50.136 CEST [20760] LOG:  Checkpoint komplett: 5 Puffer geschrieben (0.0%); 0 WAL-Datei(en) hinzugef¸gt, 0 entfernt, 0 wiederverwendet; Schreiben=0,433 s, Sync=0,021 s, gesamt=0,475 s; sync. Dateien=5, l‰ngste=0,018 s, Durchschnitt=0.005 s; Entfernung=4 kB, Sch‰tzung=4 kB; LSN=0/1A3A208, Redo-LSN=0/1A3A1D0
+2025-07-09 15:45:00.409 CEST [7008] LOG:  Serverprozess (PID 23040) wurde durch Ausnahme 0xC000013A beendet
+2025-07-09 15:45:00.409 CEST [7008] DETAIL:  Der fehlgeschlagene Prozess f¸hrte aus: SELECT r.rolname, r.rolsuper, r.rolinherit,
+	  r.rolcreaterole, r.rolcreatedb, r.rolcanlogin,
+	  r.rolconnlimit, r.rolvaliduntil
+	, r.rolreplication
+	, r.rolbypassrls
+	FROM pg_catalog.pg_roles r
+	WHERE r.rolname !~ '^pg_'
+	ORDER BY 1;
+2025-07-09 15:45:00.409 CEST [7008] TIPP:  Sehen Sie die Beschreibung des Hexadezimalwerts in der C-Include-Datei ªntstatus.h´ nach.
+2025-07-09 15:45:00.410 CEST [7008] LOG:  aktive Serverprozesse werden abgebrochen
+^C
