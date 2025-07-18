@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PV Tracker Visualisierung</title>
+  <link rel="stylesheet" href="style2.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <h2>ANLAGEN</h2>
+      <!-- Anlagen-Boxen mit Channels -->
+      <div class="anlage">
+        <div class="anlage-header" onclick="toggleChannels(this)">Aasanurme <span class="toggle-icon">+</span></div>
+        <div class="channel-list hidden">
+            <div class="channel" data-id="Aasanurme-Error_Flag">Error_Flag<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Motor_Current_Max">Motor_Current_Max<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_Hops">Rf_Hops<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-ChipTemp">ChipTemp<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Emergency_Stop">Emergency_Stop<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_RSSI_dBm">Rf_RSSI_dBm<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Device_Type">Device_Type<span class="tracker-toggle">&gt;</span></div>
+        </div>
+      </div>
+      <div class="anlage">
+        <div class="anlage-header" onclick="toggleChannels(this)">Augusta <span class="toggle-icon">+</span></div>
+        <div class="channel-list hidden">
+          <div class="channel" data-id="Augusta-Channel1">AVG - Error_Flag</div>
+          <div class="channel" data-id="Augusta-Channel2">AVG - Motor_Current_Max</div>
+          <div class="channel" data-id="Augusta-Channel3">AVG - Rf_Hops</div>
+          <div class="channel" data-id="Augusta-Channel4">AVG - ChipTemp</div>
+          <div class="channel" data-id="Augusta-Channel5">AVG - Emergency_Stop</div>
+          <div class="channel" data-id="Augusta-Channel6">AVG - Rf_RSSI_dBm</div>
+          <div class="channel" data-id="Augusta-Channel7">AVG - Device_Type</div>
+        </div>
+      </div>
+      <div class="anlage">
+        <div class="anlage-header" onclick="toggleChannels(this)">Babimost <span class="toggle-icon">+</span></div>
+        <div class="channel-list hidden">
+          <div class="channel" data-id="Babimost-Channel1">AVG - Error_Flag</div>
+          <div class="channel" data-id="Babimost-Channel2">AVG - Motor_Current_Max</div>
+          <div class="channel" data-id="Babimost-Channel3">AVG - Rf_Hops</div>
+          <div class="channel" data-id="Babimost-Channel4">AVG - ChipTemp</div>
+          <div class="channel" data-id="Babimost-Channel5">AVG - Emergency_Stop</div>
+          <div class="channel" data-id="Babimost-Channel6">AVG - Rf_RSSI_dBm</div>
+          <div class="channel" data-id="Babimost-Channel7">AVG - Device_Type</div>
+        </div>
+      </div>
+      <div class="anlage">
+        <div class="anlage-header" onclick="toggleChannels(this)">Besingrand <span class="toggle-icon">+</span></div>
+        <div class="channel-list hidden">
+          <div class="channel" data-id="Besingrand-Channel1">AVG - Error_Flag</div>
+          <div class="channel" data-id="Besingrand-Channel2">AVG - Motor_Current_Max</div>
+          <div class="channel" data-id="Besingrand-Channel3">AVG - Rf_Hops</div>
+          <div class="channel" data-id="Besingrand-Channel4">AVG - ChipTemp</div>
+          <div class="channel" data-id="Besingrand-Channel5">AVG - Emergency_Stop</div>
+          <div class="channel" data-id="Besingrand-Channel6">AVG - Rf_RSSI_dBm</div>
+          <div class="channel" data-id="Besingrand-Channel7">AVG - Device_Type</div>
+        </div>
+      </div>
+      <div class="anlage">
+        <div class="anlage-header" onclick="toggleChannels(this)">Calarasi <span class="toggle-icon">+</span></div>
+        <div class="channel-list hidden">
+          <div class="channel" data-id="Calarasi-Channel1">AVG - Error_Flag</div>
+          <div class="channel" data-id="Calarasi-Channel2">AVG - Motor_Current_Max</div>
+          <div class="channel" data-id="Calarasi-Channel3">AVG - Rf_Hops</div>
+          <div class="channel" data-id="Calarasi-Channel4">AVG - ChipTemp</div>
+          <div class="channel" data-id="Calarasi-Channel5">AVG - Emergency_Stop</div>
+          <div class="channel" data-id="Calarasi-Channel6">AVG - Rf_RSSI_dBm</div>
+          <div class="channel" data-id="Calarasi-Channel7">AVG - Device_Type</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main">
+      <!-- Zeitsteuerung -->
+  <div class="chart-controls">
+  <div class="left-controls">
+  <button>&lt;</button>
+  <input type="text" value="15.07.2025" readonly />
+  <button>&gt;</button>
+  <button id="today-button">Heute</button>
+</div>
+  <div class="center-controls">
+  <select id="day-select"></select>
+  <select id="month-select"></select>
+  <select id="year-select"></select>
+</div>
+  <div class="right-controls">
+  <span>Resolution:</span>
+  <button class="resolution-btn active" data-resolution="1d">1d</button>
+  <button class="resolution-btn" data-resolution="1w">1w</button>
+</div>
+</div>
+
+
+  <!-- Chart -->
+  <canvas id="lineChart"></canvas>
+    </div>
+
+    <div class="extras">
+      <div class="info">Extra Informationen</div>
+      <div class="extra-content">
+        <div class="info-output"></div>
+        <div class="buttons">
+          <button onclick="removeAll()">Löschen</button>
+          <button onclick="downloadChart()">Download</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <div class="tracker-popup hidden">
+  <div class="tracker-list"></div>
+  <div class="tracker-buttons">
+  <div class="left-buttons">
+    <button onclick="selectAllTrackers(this)">Select all</button>
+    <button onclick="deselectAllTrackers(this)">Select none</button>
+  </div>
+  <button onclick="addSelectedTrackers(this)">+ Add</button>
+</div>
+</div>
+
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,232 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: 70% 30%;
+  grid-template-areas:
+    "sidebar main"
+    "sidebar extras";
+  min-height: calc(100vh - 10px);
+  padding-bottom: 10px;
+  gap: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.sidebar {
+  grid-area: sidebar;
+  background: white;
+  padding: 10px;
+  border: 1px solid #ccc;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  margin: 0 0 10px;
+  text-align: center;
+}
+
+.anlage {
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.anlage-header {
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+}
+
+.anlage-header:hover {
+  background-color: #e0e0e0;
+}
+
+.channel-list {
+  padding-left: 10px;
+}
+
+.channel {
+  padding: 6px 12px;
+  margin-left: 10px;
+  color: black;
+  cursor: pointer;
+}
+
+.channel:hover {
+  background-color: #e0e0e0;
+}
+
+.hidden {
+  display: none;
+}
+
+.main {
+  grid-area: main;
+  background: white;
+  padding: 10px;
+  border: 1px solid #ccc;
+  position: relative;
+}
+
+.chart-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+
+.chart-controls button,
+.chart-controls select,
+.chart-controls input {
+  margin: 0 5px;
+  padding: 4px 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chart-controls input[readonly] {
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  pointer-events: none;
+}
+
+.chart-controls .left-controls,
+.chart-controls .center-controls,
+.chart-controls .right-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+
+#lineChart {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+.extras {
+  grid-area: extras;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: white;
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+.info {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.extra-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 10px;
+}
+
+.info-output {
+  font-size: 14px;
+  line-height: 1.6;
+  padding-right: 20px;
+  flex-grow: 1;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.buttons button {
+  padding: 10px 20px;
+  width: 120px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.resolution-btn.active {
+  background-color: orange;
+  color: white;
+  font-weight: bold;
+}
+
+.channel.active {
+  background-color: #e0e0e0;
+}
+
+.channel.active {
+  background-color: #e0e0e0;
+}
+
+.resolution-btn.active {
+  background-color: orange;
+  color: white;
+  font-weight: bold;
+}
+
+.left-controls button {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.tracker-popup {
+  position: absolute;
+  width: 300px;
+  height: 350px;
+  background: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  padding: 10px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.tracker-popup .tracker-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.tracker-popup .tracker-buttons {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.tracker-popup .tracker-buttons .left-buttons {
+  display: flex;
+  gap: 10px;
+}
+.channel {
+  padding: 6px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tracker-toggle {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.hidden {
+  display: none;
+}
+
