@@ -1,11 +1,13 @@
 import os
 import requests
 from dotenv import load_dotenv
+from datetime import datetime
 from db import get_connection
-from Motor_Current_Max import process_motor_current_max  # weitere Module hier einfügen
 
-# Lade .env Variablen (API_URL und TOKEN)
-load_dotenv()
+load_dotenv(dotenv_path=".env")
+
+print("🛠️ GANTNER API WIRD GELADEN...")
+
 BASE_URL = os.getenv("API_BASE_URL")
 TOKEN = os.getenv("API_TOKEN")
 
@@ -13,70 +15,51 @@ HEADERS = {
     "Authorization": f"Bearer {TOKEN}"
 }
 
-def get_motor_data_per_hour(site_id: int, date: str):
-    """
-    Holt Motor_Current_Max-Daten im Stundentakt als Matrix (inkl. Timestamp + Tracker-Werten).
-    """
-    url = f"{BASE_URL}/sites/{site_id}/data"
-    params = {
-        "type": "Tracker",
-        "parameters": "Motor_Current_Max*",
-        "start": f"{date}T00:00:00",
-        "end": f"{date}T23:59:59",
-        "resolution": "1hour"
-    }
+def is_tracker_cached(tracker_id, date):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT COUNT(*) FROM tracker_data
+        WHERE tracker_id = %s AND DATE(timestamp) = %s
+        AND value IS NOT NULL
+    """, (tracker_id, date))
+    row = cur.fetchone()
+    count = list(row.values())[0] if row else 0
+    cur.close()
+    conn.close()
+    return count >= 24
 
-    res = requests.get(url, headers=HEADERS, params=params)
-    print("📡 URL-Request:", res.url)
-    res.raise_for_status()
-    raw_data = res.json()
+def load_tracker_from_db(tracker_id, date):
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT timestamp, value FROM tracker_data
+        WHERE tracker_id = %s AND DATE(timestamp) = %s
+        ORDER BY timestamp ASC
+    """, (tracker_id, date))
+    rows = cur.fetchall()
+    hourly = [None] * 24
+    for row in rows:
+        timestamp = row["timestamp"]
+        value = row["value"]
+        hour = timestamp.hour
+        hourly[hour] = value
+    cur.close()
+    conn.close()
+    return hourly
 
-    data_matrix = raw_data.get("data")
-    if not data_matrix or not isinstance(data_matrix, list):
-        print("❌ Keine oder ungültige Datenmatrix!")
-        return None
+def save_to_db(data):
+    timestamps = data["timestamps"]
+    values_map = data["values"]
 
-    print("📦 Anzahl Datenzeilen:", len(data_matrix))
-
-    # Extrahiere Timestamps (erste Spalte)
-    timestamps = [row[0] for row in data_matrix if isinstance(row, list) and len(row) > 1]
-
-    # Extrahiere Trackerwerte (alle Spalten außer der ersten)
-    values = list(zip(*[row[1:] for row in data_matrix if isinstance(row, list) and len(row) > 1]))
-
-    print("🕒 Anzahl Zeitpunkte:", len(timestamps))
-    print("🔧 Anzahl Tracker:", len(values))
-
-    return {
-        "timestamps": timestamps,
-        "values": [list(col) for col in values]
-    }
-
-def save_to_db(data, parameter_name="Motor_Current_Max"):
-    """
-    Speichert die Tracker-Daten mit Timestamps in die PostgreSQL-Datenbank.
-    """
     conn = get_connection()
     cur = conn.cursor()
 
-    timestamps = data["timestamps"]
-    values = data["values"]
-
-    for tracker_index, tracker_values in enumerate(values, start=1):
-        tracker_id = f"{parameter_name}-{tracker_index:03}"
-
-        for i, value in enumerate(tracker_values):
-            timestamp = timestamps[i]
-
-            # Falls der Wert ein dict ist, extrahiere den echten float-Wert
-            if isinstance(value, dict):
-                value = value.get("value")
-
+    for tracker_id, value_list in values_map.items():
+        for i, value in enumerate(value_list):
             if value is None:
-                continue  # überspringe fehlende Werte
-            
-            print(f"🧪 Tracker: {tracker_id}, Zeit: {timestamp}, Wert: {value}, Typ: {type(value)}")
-
+                continue
+            timestamp = timestamps[i]
             cur.execute("""
                 INSERT INTO tracker_data (tracker_id, timestamp, value)
                 VALUES (%s, %s, %s)
@@ -88,26 +71,67 @@ def save_to_db(data, parameter_name="Motor_Current_Max"):
     conn.close()
     print("✅ Daten erfolgreich gespeichert!")
 
+def fetch_gantner_data(tracker_ids, date, parameter):
+    print(f"🌐 Starte API-Abruf für {parameter}: {tracker_ids}")
+    site_id = 377  # Aasanurme
 
-if __name__ == "__main__":
-    from datetime import datetime, timedelta
-    SITE_ID = 377
+    # IDs extrahieren (z. B. 001 aus Aasanurme-001.Angle)
+    tracker_indices = [tid.split("-")[1].split(".")[0] for tid in tracker_ids]
+    param_list = [f"{parameter}_{i}" for i in tracker_indices]
+    param_str = ",".join(param_list)
 
-    start_date = datetime.strptime("2025-07-18", "%Y-%m-%d")
-    end_date = datetime.strptime("2025-07-011", "%Y-%m-%d")
+    url = f"{BASE_URL}/sites/{site_id}/data"
+    params = {
+        "type": "Tracker",
+        "parameters": param_str,  # 👈 exakt, nicht Angle*
+        "start": f"{date}T00:00:00",
+        "end": f"{date}T23:59:59",
+        "resolution": "1hour",
+        "aggregation": "AVG"
+    }
 
-    current_date = start_date
+    response = requests.get(url, headers=HEADERS, params=params)
+    print("🌐 Gantner Status:", response.status_code)
+    response.raise_for_status()
+    json_data = response.json()
 
-    while current_date >= end_date:
-        date_str = current_date.strftime("%Y-%m-%d")
-        print(f"\n📅 === {date_str} ===")
+    raw_data = json_data.get("data", [])
 
-        data = get_motor_data_per_hour(SITE_ID, date_str)
+    if not raw_data:
+        print("⚠️ Gantner API hat keine Daten geliefert.")
+        return {
+            "timestamps": [],
+            "values": {tid: [None] * 24 for tid in tracker_ids}
+        }
 
-        if data and data.get("timestamps") and data.get("values"):
-            save_to_db(data)
-            process_motor_current_max(date_str)
-        else:
-            print("⚠️ Keine gültigen Daten empfangen.")
+    # Timestamps parsen
+    timestamps = []
+    for row in raw_data:
+        try:
+            timestamps.append(datetime.fromisoformat(str(row[0])))
+        except:
+            timestamps.append(None)
 
-        current_date -= timedelta(days=1)
+    # Fallback-Zuordnung alphabetisch
+    sorted_ids = sorted(tracker_ids)
+    index_to_tracker = {
+        idx: sorted_ids[idx - 1] for idx in range(1, len(sorted_ids) + 1)
+    }
+    print("✅ Fallback-Zuordnung:", index_to_tracker)
+
+    values_map = {tid: [None] * 24 for tid in tracker_ids}
+
+    for row in raw_data:
+        try:
+            hour = datetime.fromisoformat(str(row[0])).hour
+        except:
+            continue
+        for idx in range(1, len(row)):
+            tid = index_to_tracker.get(idx)
+            if tid and hour < 24:
+                values_map[tid][hour] = row[idx]
+
+    return {
+        "timestamps": timestamps,
+        "values": values_map
+    }

@@ -6,6 +6,7 @@
   <title>PV Tracker Visualisierung</title>
   <link rel="stylesheet" href="style2.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body>
   <div class="container">
@@ -15,17 +16,40 @@
       <div class="anlage">
         <div class="anlage-header" onclick="toggleChannels(this)">Aasanurme <span class="toggle-icon">+</span></div>
         <div class="channel-list hidden">
-            <div class="channel" data-id="Aasanurme-Error_Flag">Error_Flag<span class="tracker-toggle">&gt;</span></div>
-            <div class="channel" data-id="Aasanurme-Motor_Current_Max">Motor_Current_Max<span class="tracker-toggle">&gt;</span></div>
-            <div class="channel" data-id="Aasanurme-Rf_Hops">Rf_Hops<span class="tracker-toggle">&gt;</span></div>
-            <div class="channel" data-id="Aasanurme-ChipTemp">ChipTemp<span class="tracker-toggle">&gt;</span></div>
-            <div class="channel" data-id="Aasanurme-Emergency_Stop">Emergency_Stop<span class="tracker-toggle">&gt;</span></div>
-            <div class="channel" data-id="Aasanurme-Rf_RSSI_dBm">Rf_RSSI_dBm<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Angle">Angle [°]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Angle_Diff">Angle_Diff [°]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Chip_Temp">Chip_Temp [°C]<span class="tracker-toggle">&gt;</span></div>
             <div class="channel" data-id="Aasanurme-Device_Type">Device_Type<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Emergency_Stop">Emergency_Stop<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Emergency_Switch">Emergency_Switch<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Error_Flags">Error_Flags<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Firmware">Firmware<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Health_Errors">Health_Errors<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Health_Missed">Health_Missed<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Last_Angle">Last_Angle [°]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Meta_Cleaning">Meta_Cleaning<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Meta_Monitoring">Meta_Monitoring<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Meta_Serial">Meta_Serial<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Motor_Current">Motor_Current [A]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Motor_Current_Max">Motor_Current_Max [A]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Restarted">Restarted<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_Errors">Rf_Errors<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_Hops">Rf_Hops<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_Latency">Rf_Latency<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_Retries">Rf_Retries<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_RSSI_dBm">Rf_RSSI_dBm [dBm]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_Time_Ack">Rf_Time_Ack [ms]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Rf_Time_Answer">Rf_Time_Answer [ms]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Set_Angle">Set_Angle [°]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Set_Mode">Set_Mode<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Set_Motor_Control">Set_Motor_Control<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Stuck">Stuck<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Supply_Voltage">Supply_Voltage [V]<span class="tracker-toggle">&gt;</span></div>
+            <div class="channel" data-id="Aasanurme-Uptime">Uptime [s]<span class="tracker-toggle">&gt;</span></div>
         </div>
       </div>
       <div class="anlage">
-        <div class="anlage-header" onclick="toggleChannels(this)">Augusta <span class="toggle-icon">+</span></div>
+        <div class="anlage-header" onclick="toggleChannels(this)">Bavendorf <span class="toggle-icon">+</span></div>
         <div class="channel-list hidden">
           <div class="channel" data-id="Augusta-Channel1">AVG - Error_Flag</div>
           <div class="channel" data-id="Augusta-Channel2">AVG - Motor_Current_Max</div>
@@ -37,7 +61,7 @@
         </div>
       </div>
       <div class="anlage">
-        <div class="anlage-header" onclick="toggleChannels(this)">Babimost <span class="toggle-icon">+</span></div>
+        <div class="anlage-header" onclick="toggleChannels(this)">DeepTrack <span class="toggle-icon">+</span></div>
         <div class="channel-list hidden">
           <div class="channel" data-id="Babimost-Channel1">AVG - Error_Flag</div>
           <div class="channel" data-id="Babimost-Channel2">AVG - Motor_Current_Max</div>
@@ -49,7 +73,7 @@
         </div>
       </div>
       <div class="anlage">
-        <div class="anlage-header" onclick="toggleChannels(this)">Besingrand <span class="toggle-icon">+</span></div>
+        <div class="anlage-header" onclick="toggleChannels(this)">Geisenheim <span class="toggle-icon">+</span></div>
         <div class="channel-list hidden">
           <div class="channel" data-id="Besingrand-Channel1">AVG - Error_Flag</div>
           <div class="channel" data-id="Besingrand-Channel2">AVG - Motor_Current_Max</div>
@@ -61,7 +85,7 @@
         </div>
       </div>
       <div class="anlage">
-        <div class="anlage-header" onclick="toggleChannels(this)">Calarasi <span class="toggle-icon">+</span></div>
+        <div class="anlage-header" onclick="toggleChannels(this)">Hajdusamson <span class="toggle-icon">+</span></div>
         <div class="channel-list hidden">
           <div class="channel" data-id="Calarasi-Channel1">AVG - Error_Flag</div>
           <div class="channel" data-id="Calarasi-Channel2">AVG - Motor_Current_Max</div>
@@ -91,13 +115,16 @@
   <div class="right-controls">
   <span>Resolution:</span>
   <button class="resolution-btn active" data-resolution="1d">1d</button>
-  <button class="resolution-btn" data-resolution="1w">1w</button>
-</div>
+  </div>
 </div>
 
-
-  <!-- Chart -->
-  <canvas id="lineChart"></canvas>
+    <div id="chart-container">
+      <canvas id="lineChart"></canvas>
+      <div id="chart-loader" class="hidden">
+      <div class="loader"></div>
+      </div>
+    </div>
+  
     </div>
 
     <div class="extras">
@@ -106,23 +133,70 @@
         <div class="info-output"></div>
         <div class="buttons">
           <button onclick="removeAll()">Löschen</button>
-          <button onclick="downloadChart()">Download</button>
+          <button onclick="openDownloadModal()">Download</button>
+          <button id="multiDownloadBtn">Multiple Download</button>
+          <button onclick="reloadActiveTrackers()">Reload</button>
         </div>
       </div>
     </div>
   </div>
 
-    <div class="tracker-popup hidden">
-  <div class="tracker-list"></div>
-  <div class="tracker-buttons">
-  <div class="left-buttons">
-    <button onclick="selectAllTrackers(this)">Select all</button>
-    <button onclick="deselectAllTrackers(this)">Select none</button>
+  <div class="tracker-popup hidden">
+    <div class="tracker-list"></div>
+    <div class="tracker-buttons">
+      <div class="left-buttons">
+        <button onclick="selectAllTrackers(this)">Select all</button>
+        <button onclick="deselectAllTrackers(this)">Select none</button>
+      </div>
+      <button onclick="addSelectedTrackers(this)">+ Add</button>
+    </div>
   </div>
-  <button onclick="addSelectedTrackers(this)">+ Add</button>
-</div>
-</div>
 
+  <div id="multiDownloadModal" class="hidden modal-overlay">
+    <div class="modal-window">
+    
+      <!-- 🔍 Anlagen -->
+      <div class="modal-section">
+        <h3>Anlagen</h3>
+        <input type="text" placeholder="Anlagen suchen..." class="modal-search" />
+        <div>
+          <label><input type="checkbox" /> Aasanurme</label><br />
+        </div>
+      </div>
+    
+      <!-- 📊 Channels -->
+      <div class="modal-section">
+        <h3>Channels</h3>
+        <input type="text" placeholder="Channels suchen..." class="modal-search" />
+        <div class="scroll-list">
+          <label><input type="checkbox" /> Angle</label><br />
+          <label><input type="checkbox" /> Chip_Temp</label><br />
+          <label><input type="checkbox" /> Motor_Current_Max</label><br />
+        </div>
+      </div>
+    
+      <!-- 📆 Zeitraum + Buttons -->
+      <div class="modal-section narrow">
+        <h3>Zeitraum</h3>
+        <label>Startdatum:<br /><input type="date" id="startDate" /></label><br /><br />
+        <label>Enddatum:<br /><input type="date" id="endDate" /></label><br /><br />
+        <button id="confirmDownload" class="modal-download-btn">Download</button>
+        <button onclick="closeMultiDownload()" class="modal-close-btn">Schließen</button>
+      </div>
+    
+    </div>
+  </div>
+
+  <div id="downloadModal" class="hidden modal-overlay">
+    <div class="modal-window" style="flex-direction: column; max-width: 300px;">
+      <h3>Download-Format wählen</h3>
+      <label><input type="radio" name="download-type" value="png" checked /> PNG (Bild)</label>
+      <label><input type="radio" name="download-type" value="csv" /> CSV (Werte)</label>
+      <br />
+      <button id="confirmDownloadBtn">Download</button>
+      <button onclick="closeDownloadModal()">Abbrechen</button>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
