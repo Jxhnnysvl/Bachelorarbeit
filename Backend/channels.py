@@ -1,6 +1,15 @@
 from channel_functions.Angle import process_angle
 from channel_functions.Chip_Temp import process_chip_temp
 from channel_functions.Device_Type import process_device_type
+from channel_functions.Emergency_Stop import process_emergency_stop
+from channel_functions.Emergency_Switch import process_emergency_switch
+from channel_functions.Firmware import process_firmware
+from channel_functions.Health_Errors import process_health_errors
+
+from channel_functions.Last_Angle import process_last_angle
+
+from channel_functions.Motor_Current import process_motor_current
+from channel_functions.Motor_Current_Max import process_motor_current_max
 
 channel_definitions = {
     "angle": {
@@ -28,12 +37,12 @@ channel_definitions = {
     "emergency_stop": {
         "label": "Emergency_Stop",
         "unit": "",
-        "function": None
+        "function": process_emergency_stop
     },
     "emergency_switch": {
         "label": "Emergency_Switch",
         "unit": "",
-        "function": None
+        "function": process_emergency_switch
     },
     "error_flags": {
         "label": "Error_Flags",
@@ -43,12 +52,14 @@ channel_definitions = {
     "firmware": {
         "label": "Firmware",
         "unit": "",
-        "function": None
+        "function": process_firmware,
+        "scale": lambda v: v / 2500  
     },
     "health_errors": {
         "label": "Health_Errors",
         "unit": "",
-        "function": None
+        "function": process_health_errors,
+        "scale": lambda v: v / 2000
     },
     "health_missed": {
         "label": "Health_Missed",
@@ -58,7 +69,8 @@ channel_definitions = {
     "last_angle": {
         "label": "Last_Angle",
         "unit": "°",
-        "function": None
+        "function": process_last_angle,
+        "scale": lambda v: (v + 60) / 24  # ✅ wichtig!
     },
     "meta_cleaning": {
         "label": "Meta_Cleaning",
@@ -78,12 +90,12 @@ channel_definitions = {
     "motor_current": {
         "label": "Motor_Current",
         "unit": "A",
-        "function": None
+        "function": process_motor_current
     },
     "motor_current_max": {
         "label": "Motor_Current_Max",
         "unit": "A",
-        "function": None  # <- Ergänzen, sobald Funktion fertig
+        "function": process_motor_current_max
     },
     "restarted": {
         "label": "Restarted",

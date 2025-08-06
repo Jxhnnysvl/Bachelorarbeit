@@ -22,7 +22,6 @@ def process_device_type(date):
             val = row["value"]
             hour = ts.hour
 
-            # ✅ Korrekte Skalierung: 3001 → 1, 3012 → 2
             if val == 3001:
                 hourly_values[hour] = 1
             elif val == 3012:

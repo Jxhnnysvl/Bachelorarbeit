@@ -23,7 +23,7 @@ def process_chip_temp(date="2025-07-15"):
             hour = ts.hour
 
             if val is not None:
-                val = float(val)      #7° sollen 1 Stufe auf Y-Achse einnehmen
+                val = float(val)   
 
             hourly_values[hour] = val
 

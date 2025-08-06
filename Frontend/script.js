@@ -15,14 +15,37 @@ const predefinedColors = [
 
 for (let i = 1; i <= 19; i++) {
   const num = i.toString().padStart(3, "0");
-  trackerColors[`Error_Flag-${num}`] = predefinedColors[i - 1];
-  trackerColors[`Motor_Current_Max-${num}`] = predefinedColors[i - 1];
-  trackerColors[`Rf_Hops-${num}`] = predefinedColors[i - 1];
-  trackerColors[`Chip_Temp-${num}`] = predefinedColors[i - 1];
-  trackerColors[`Emergency_Stop-${num}`] = predefinedColors[i - 1];
-  trackerColors[`Rf_RSSI_dBm-${num}`] = predefinedColors[i - 1];
-  trackerColors[`Device_Type-${num}`] = predefinedColors[i - 1];
+
   trackerColors[`Angle-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Angle_Diff-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Chip_Temp-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Device_Type-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Emergency_Stop-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Emergency_Switch-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Error_Flags-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Firmware-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Health_Errors-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Health_Missed-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Last_Angle-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Meta_Cleaning-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Meta_Monitoring-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Meta_Serial-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Motor_Current-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Motor_Current_Max-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Restarted-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Rf_Errors-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Rf_Hops-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Rf_Latency-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Rf_Retries-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Rf_RSSI_dBm-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Rf_Time_Ack-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Rf_Time_Answer-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Set_Angle-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Set_Mode-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Set_Motor_Control-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Stuck-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Supply_Voltage-${num}`] = predefinedColors[i - 1];
+  trackerColors[`Uptime-${num}`] = predefinedColors[i - 1];
 }
 
 function hexToRgba(hex, alpha = 1) {
@@ -35,13 +58,35 @@ function hexToRgba(hex, alpha = 1) {
 
 function getUnit(label) {
   if (label.includes("Motor_Current_Max")) return " [A]";
+  if (label.includes("Motor_Current")) return " [A]";
   if (label.includes("Chip_Temp")) return " [°C]";
   if (label.includes("Rf_RSSI_dBm")) return " [dBm]";
   if (label.includes("Rf_Hops")) return " [Hops]";
   if (label.includes("Error_Flag")) return " [%]";
   if (label.includes("Emergency_Stop")) return "";
+  if (label.includes("Emergency_Switch")) return "";
   if (label.includes("Device_Type")) return "";
+  if (label.includes("Angle_Diff")) return " [°]";
+  if (label.includes("Last_Angle")) return " [°]";
+  if (label.includes("Set_Angle")) return " [°]";
   if (label.includes("Angle")) return " [°]";
+  if (label.includes("Firmware")) return "";
+  if (label.includes("Health_Errors")) return "";
+  if (label.includes("Health_Missed")) return "";
+  if (label.includes("Meta_Cleaning")) return "";
+  if (label.includes("Meta_Monitoring")) return "";
+  if (label.includes("Meta_Serial")) return "";
+  if (label.includes("Restarted")) return "";
+  if (label.includes("Rf_Errors")) return "";
+  if (label.includes("Rf_Latency")) return "";
+  if (label.includes("Rf_Retries")) return "";
+  if (label.includes("Rf_Time_Ack")) return " [ms]";
+  if (label.includes("Rf_Time_Answer")) return " [ms]";
+  if (label.includes("Set_Mode")) return "";
+  if (label.includes("Set_Motor_Control")) return "";
+  if (label.includes("Stuck")) return "";
+  if (label.includes("Supply_Voltage")) return " [V]";
+  if (label.includes("Uptime")) return " [s]";
   return "";
 }
 
@@ -157,20 +202,22 @@ function setupChart() {
               const point = tooltipItem.raw;
               const value = point?.original ?? tooltipItem.formattedValue;
 
+              const unit = getUnit(label);
               let displayValue = value;
 
-              if (label.includes("Chip_Temp")) {
-                displayValue = value.toFixed(1);  // ✅ NICHT mehr multiplizieren!
-                return `${label}: ${displayValue}`;
+              // Wenn keine Einheit --> ganze Zahl ohne Kommastellen
+              if (unit === "") {
+                return `${label}: ${Math.round(value)}`;
               }
             
-              const unit = getUnit(label);
-            
+              // Wenn Einheit --> ganze Zahl mit 0 Nachkommastellen
               if (!isNaN(value)) {
-                displayValue = parseFloat(value).toFixed(3);  // ⬅️ Runden auf 3 Nachkommastellen
+                displayValue = parseFloat(value).toFixed(3);
               }
             
-              return `${label}: ${displayValue}`;
+              const hasUnitInLabel = /\[.*?\]$/.test(label);
+              const unitSuffix = hasUnitInLabel ? "" : unit;
+              return `${label}: ${displayValue}${unitSuffix}`;
             }
           }
         }
@@ -411,8 +458,14 @@ function loadDataForDate(date) {
               ? data.map(v => (v !== null ? v / 8 : null))
               : param === "Angle"
               ? data.map(v => (v !== null ? (v + 60) / 24 : null))
+              : param === "Last_Angle" 
+              ? data.map(v => (v !== null ? (v + 60) / 24 : null))
               : param === "Device_Type"
               ? data.map(v => (v === 3001 ? 1 : v === 3012 ? 2 : null))
+              : param === "Firmware"
+              ? data.map(v => (v !== null ? v / 2500 : null))
+              : param === "Health_Errors"
+              ? data.map(v => (v !== null ? v / 2000 : null))
               : data;
 
           const cleanedData = Array.from({ length: 24 }, (_, i) => ({
@@ -499,8 +552,14 @@ function loadDataForDate(date) {
               ? data.map(v => (v !== null ? v / 8 : null))
               : param === "Angle"
               ? data.map(v => (v !== null ? (v + 60) / 24 : null))
+              : param === "Last_Angle"  
+              ? data.map(v => (v !== null ? (v + 60) / 24 : null))
               : param === "Device_Type"
               ? data.map(v => (v === 3001 ? 1 : v === 3012 ? 2 : null))
+              : param === "Firmware"
+              ? data.map(v => (v !== null ? v / 2500 : null))
+              : param === "Health_Errors"
+              ? data.map(v => (v !== null ? v / 2000 : null))
               : data;
 
           const cleanedData = Array.from({ length: 24 }, (_, i) => ({
@@ -724,57 +783,81 @@ function deselectAllTrackers(btn) {
   });
 }
 
-async function addSelectedTrackers(btn) {
+function addSelectedTrackers(btn) {
   const popup = btn.closest(".tracker-popup");
-  const checkboxes = popup.querySelectorAll("input[type=checkbox]:checked");
+  const checkboxes = popup.querySelectorAll("input[type=checkbox]");
 
-  const trackerIds = Array.from(checkboxes).map(cb => cb.value);
-  if (trackerIds.length === 0) return;
+  const trackersToFetch = [];
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      trackersToFetch.push(cb.dataset.tracker);
+    }
+  });
+
+  if (trackersToFetch.length === 0) return;
 
   const dateStr = selectedDate.toISOString().slice(0, 10);
 
-  try {
-    const res = await fetch("http://localhost:5000/api/data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trackers: trackerIds, date: dateStr })
-    });
+  fetch("http://localhost:5000/api/data", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      trackers: trackersToFetch,
+      date: dateStr
+    })
+  })
+    .then(res => res.json())
+    .then(backendData => {
+      trackersToFetch.forEach(label => {
+        const backendKey = label;
+        const data = backendData[backendKey];
 
-    const backendData = await res.json();
-    console.log("📊 API-Daten:", backendData);
+        if (!data || !Array.isArray(data)) {
+          console.warn("⚠️ Keine oder ungültige Daten für", backendKey);
+          return;
+        }
 
-    trackerIds.forEach(label => {
-      if (typeof label !== "string" || !label.includes("-") || !label.includes(".")) {
-        console.warn("❌ Ungültiges Label übersprungen:", label);
-        return;
-      }
+        loadedTrackerData[label] = data;
 
+        const [anlage, paramRaw] = label.split("-");
+        const [index, param] = paramRaw.split(".");
+        const key = `${param}-${index}`;
+        const unit = getUnit(param);
+        const originalData = data;
 
-      const [anlage, paramRaw] = label.split("-");
-      const [index, param] = paramRaw.split(".");
-      const key = `${param}-${index}`;
-      const unit = getUnit(param);
-      const color = getTrackerColor(key);
+        const scaledData =
+          param === "Chip_Temp"
+            ? data.map(v => (v !== null ? v / 8 : null))
+            : param === "Angle"
+            ? data.map(v => (v !== null ? (v + 60) / 24 : null))
+            : param === "Last_Angle"  
+            ? data.map(v => (v !== null ? (v + 60) / 24 : null))
+            : param === "Device_Type"
+            ? data.map(v => (v === 3001 ? 1 : v === 3012 ? 2 : null))
+            : param === "Firmware"
+            ? data.map(v => (v !== null ? v / 2500 : null))
+            : param === "Health_Errors"
+            ? data.map(v => (v !== null ? v / 2000 : null))
+            : data;
 
-      const scaledData =
-        param.toLowerCase() === "chip_temp"
-          ? data.map(v => (v !== null ? v / 8 : null))
-          : param.toLowerCase() === "angle"
-          ? data.map(v => (v !== null ? (v + 60) / 24 : null))
-          : data;
+        const cleanedData = Array.from({ length: 24 }, (_, i) => ({
+          x: `${i.toString().padStart(2, "0")}:00`,
+          y: scaledData[i] ?? null,
+          original: originalData[i] ?? null
+        }));
 
-      const cleanedData = scaledData.map((val, hour) => ({
-        x: `${hour.toString().padStart(2, "0")}:00`,
-        y: val,
-        original: data[hour]
-      }));
+        const hasValidY = cleanedData.some(point => point.y !== null);
+        const color = trackerColors[key] || "#000000";
 
-      const hasValidY = cleanedData.some(p => p.y !== null);
+        if (chartData[label]) {
+          console.warn(`⚠️ Tracker ${label} ist bereits im Chart – wird übersprungen.`);
+          return;
+        }
 
-      if (!chartData[label]) {
+        // Tracker NEU hinzufügen
         chartData[label] = {
           label: `${label} ${unit}`.trim(),
-          data: hasValidY ? cleanedData : [],
+          data: [],
           borderColor: color,
           backgroundColor: color,
           pointBorderColor: color,
@@ -784,18 +867,29 @@ async function addSelectedTrackers(btn) {
           fill: false
         };
         chart.data.datasets.push(chartData[label]);
-        activeTrackerLabels.add(label);
-      } else {
-        chartData[label].data = hasValidY ? cleanedData : [];
-      }
-    });
 
-    chart.update();
-    updateInfoOutput();
-    closeAllPopups();
-  } catch (err) {
-    console.error("❌ Fehler beim Abrufen der Tracker-Daten:", err);
-  }
+        chartData[label].borderColor = color;
+        chartData[label].backgroundColor = color;
+        chartData[label].pointBorderColor = color;
+        chartData[label].pointBackgroundColor = color;
+
+        chartData[label].data = hasValidY ? cleanedData : [];
+        activeTrackerLabels.add(label);
+      });
+
+      chart.update();
+      updateInfoOutput();
+
+      document.querySelectorAll(".tracker-toggle").forEach(t => t.textContent = ">");
+      checkboxes.forEach(cb => {
+        cb.checked = false;
+        selectedTrackers[cb.dataset.tracker] = false;
+      });
+      closeAllPopups();
+    })
+    .catch(err => {
+      console.error("❌ Fehler beim Abrufen der Tracker-Daten:", err);
+    });
 }
 
 function reloadActiveTrackers() {
@@ -838,8 +932,14 @@ function reloadActiveTrackers() {
             ? data.map(v => (v !== null ? v / 8 : null))
             : param === "Angle"
             ? data.map(v => (v !== null ? (v + 60) / 24 : null))
+            : param === "Last_Angle"  
+            ? data.map(v => (v !== null ? (v + 60) / 24 : null))
             : param === "Device_Type"
             ? data.map(v => (v === 3001 ? 1 : v === 3012 ? 2 : null))
+            : param === "Firmware"
+            ? data.map(v => (v !== null ? v / 2500 : null))
+            : param === "Health_Errors"
+            ? data.map(v => (v !== null ? v / 2000 : null))
             : data;
 
         const cleanedData = Array.from({ length: 24 }, (_, i) => ({
