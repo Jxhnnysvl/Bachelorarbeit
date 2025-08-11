@@ -2,7 +2,7 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* verhindert Scrollen der gesamten Seite */
+  overflow: hidden; 
 }
 
 body {
@@ -21,7 +21,7 @@ body {
     "sidebar extras";
   gap: 10px;
   padding: 10px;
-  padding-bottom: 20px; /* ✅ sorgt für Abstand unten */
+  padding-bottom: 20px; 
   box-sizing: border-box;
 }
 
@@ -31,8 +31,8 @@ body {
   padding: 10px;
   border: 1px solid #ccc;
   overflow-y: scroll;
-  height: 100%; /* fixierte Höhe innerhalb des Grids */
-  padding-bottom: 10px;     /* ✅ Abstand unten */
+  height: 100%; 
+  padding-bottom: 10px;    
   box-sizing: border-box;
 }
 
@@ -72,7 +72,7 @@ body {
   margin-left: 10px;
   color: black;
   cursor: pointer;
-  user-select: none; /* verhindert Text markieren */
+  user-select: none;
 }
 .channel:hover {
   background-color: #e0e0e0;
@@ -253,13 +253,11 @@ body {
   transition: opacity 0.3s ease;
 }
 
-/* Scrollbar-Style für moderne Browser (Firefox & Co) */
 .sidebar {
   scrollbar-width: thin;
   scrollbar-color: #aaa transparent;
 }
 
-/* Scrollbar-Style für WebKit-Browser (Chrome, Edge, Safari) */
 .sidebar::-webkit-scrollbar {
   width: 8px;
 }
@@ -356,7 +354,7 @@ body {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 10;
-  pointer-events: none; /* wichtig: blockiert keine Mausaktionen */
+  pointer-events: none; 
 }
 
 .loader {
@@ -383,3 +381,4 @@ body {
   display: block;
 }
 
+.extra-content { overflow: auto; }

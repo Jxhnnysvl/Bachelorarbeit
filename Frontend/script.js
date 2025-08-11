@@ -1,10 +1,183 @@
 let chart;
 const chartData = {};
-let selectedTrackers = {}; // aktuelle Checkbox-Zustände
+let selectedTrackers = {}; 
 let activeTrackerLabels = new Set();
-let selectedDate = new Date(); // nimmt immer das aktuelle Datum
+let selectedDate = new Date();
 let loadedTrackerData = {};
 
+const API_BASE = "http://localhost:5000/api";
+
+const trackerCounts = {
+  Aasanurme: 19,
+  Augusta: 25,
+  Augustenberg: 24,
+  Bavendorf: 18,
+  DeepTrack: 9,
+  Evapore: 8,
+  Geisenheim: 12,
+  Greenberry: 40,
+  Grong_Grong: 38,
+  Hajdusamson: 20,
+  Innoagri: 20,
+  Pacentro: 32,
+  Paterno: 33,
+  Riva_Presso_Chieri: 35,
+  Salice: 31,
+  San_Benigno: 27,
+  San_Constanzo: 26,
+  Thiva: 32,
+  Tricerro: 26,
+  Veringenstadt: 34
+};
+
+const SITE_OPTIONS = [
+  "Aasanurme",
+  "Augusta",
+  "Augustenberg",
+  "Bavendorf",
+  "DeepTrack",
+  "Evapore",
+  "Geisenheim",
+  "Greenberry",
+  "Grong Grong",
+  "Hajdusamson",
+  "Innoagri",
+  "Pacentro",
+  "Paterno",
+  "Riva Presso Chieri",
+  "Salice",
+  "San_Benigno",
+  "San Constanzo",
+  "Thiva",
+  "Tricerro",
+  "Veringenstadt"
+];
+
+const CHANNEL_OPTIONS = [
+  "Angle","Angle_Diff","Chip_Temp","Device_Type","Emergency_Stop","Emergency_Switch",
+  "Error_Flags","Firmware","Health_Errors","Health_Missed","Last_Angle","Meta_Cleaning",
+  "Meta_Monitoring","Meta_Serial","Motor_Current","Motor_Current_Max","Restarted",
+  "Rf_Errors","Rf_Hops","Rf_Latency","Rf_Retries","Rf_RSSI_dBm","Rf_Time_Ack",
+  "Rf_Time_Answer","Set_Angle","Set_Mode","Set_Motor_Control","Stuck","Supply_Voltage","Uptime"
+];
+
+const sidebarState = {};
+
+function createEl(tag, attrs = {}, html = "") {
+  const el = document.createElement(tag);
+  Object.entries(attrs).forEach(([k,v]) => (k === "class") ? el.className = v : el.setAttribute(k, v));
+  if (html) el.innerHTML = html;
+  return el;
+}
+
+// Sidebar neu rendern
+function renderSidebar() {
+  const container = document.getElementById("anlagen-container");
+  container.innerHTML = "";
+
+  const sites = Object.keys(sidebarState).sort((a,b)=>a.localeCompare(b));
+  if (sites.length === 0) {
+    container.innerHTML = `<div style="color:#777; padding:6px 8px;">Noch keine Anlagen hinzugefügt.</div>`;
+    return;
+  }
+
+  sites.forEach(site => {
+    const channels = Array.from(sidebarState[site] || []).sort((a,b)=>a.localeCompare(b));
+
+    const box = createEl("div", { class: "anlage" });
+
+    const header = createEl("div", { class: "anlage-header" }, `${site} <span class="toggle-icon">+</span>`);
+    header.addEventListener("click", () => {
+      list.classList.toggle("hidden");
+      header.querySelector(".toggle-icon").textContent = list.classList.contains("hidden") ? "+" : "-";
+    });
+
+    // Channel-Liste
+    const list = createEl("div", { class: "channel-list hidden" });
+    channels.forEach(channel => {
+      const row = createEl("div", { class: "channel", "data-id": `${site}-${channel}` }, 
+        `${channel}${getUnit(channel) ? " " + getUnit(channel) : ""} <span class="tracker-toggle">&gt;</span>`
+      );
+
+      row.addEventListener("mousedown", e => e.preventDefault()); 
+      row.addEventListener("click", e => {
+        e.stopPropagation();
+        openTrackerPopup(row, site, channel);
+      });
+
+      list.appendChild(row);
+    });
+
+    box.appendChild(header);
+    box.appendChild(list);
+    container.appendChild(box);
+  });
+}
+
+const addModal = document.getElementById("addSelectionModal");
+const addSitesBox = document.getElementById("addModalSites");
+const addChannelsBox = document.getElementById("addModalChannels");
+
+function populateAddModal() {
+  addSitesBox.innerHTML = SITE_OPTIONS.map(s => 
+    `<label><input type="checkbox" value="${s}"> ${s}</label><br/>`
+  ).join("");
+
+  addChannelsBox.innerHTML = CHANNEL_OPTIONS.map(c => 
+    `<label><input type="checkbox" value="${c}"> ${c}</label><br/>`
+  ).join("");
+}
+
+document.getElementById("btn-add-site").addEventListener("click", () => {
+  populateAddModal();
+  addModal.classList.remove("hidden");
+});
+
+document.getElementById("addSelectionClose").addEventListener("click", () => {
+  addModal.classList.add("hidden");
+});
+
+document.querySelectorAll('#addSelectionModal .modal-search').forEach(inp => {
+  inp.addEventListener("input", () => {
+    const target = inp.dataset.target === "anlagen" ? addSitesBox : addChannelsBox;
+    const q = inp.value.toLowerCase();
+    target.querySelectorAll("label").forEach(lbl => {
+      const text = lbl.textContent.toLowerCase();
+      lbl.style.display = text.includes(q) ? "" : "none";
+    });
+  });
+});
+
+document.getElementById("addSelectionConfirm").addEventListener("click", () => {
+  const selectedSites = Array.from(addSitesBox.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+  const selectedChannels = Array.from(addChannelsBox.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+
+  if (!selectedSites.length || !selectedChannels.length) {
+    alert("Bitte mindestens eine Anlage und einen Channel auswählen!");
+    return;
+  }
+
+  selectedSites.forEach(site => {
+    if (!sidebarState[site]) sidebarState[site] = new Set();
+    selectedChannels.forEach(ch => sidebarState[site].add(ch));
+  });
+
+  renderSidebar();
+  addModal.classList.add("hidden");
+});
+
+// Sidebar Löschen-Button
+document.getElementById("btn-clear-sites").addEventListener("click", () => {
+  for (const k in sidebarState) delete sidebarState[k];
+  removeAll();        
+  renderSidebar();   
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderSidebar();
+});
+
+// feste Farbdefinition
 const trackerColors = {};
 const predefinedColors = [
   "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
@@ -49,7 +222,7 @@ for (let i = 1; i <= 19; i++) {
 }
 
 function hexToRgba(hex, alpha = 1) {
-  if (!/^#([A-Fa-f0-9]{6})$/.test(hex)) return hex; // falls keine Hex-Farbe
+  if (!/^#([A-Fa-f0-9]{6})$/.test(hex)) return hex; 
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -90,6 +263,39 @@ function getUnit(label) {
   return "";
 }
 
+function seriesToPoints(series, param) {
+  if (!Array.isArray(series)) return [];
+  const scaled = 
+    param === "Chip_Temp"      ? series.map(v => v!=null ? v/8 : null) :
+    param === "Angle"          ? series.map(v => v!=null ? (v+60)/24 : null) :
+    param === "Last_Angle"     ? series.map(v => v!=null ? (v+60)/24 : null) :
+    param === "Device_Type"    ? series.map(v => v===3001 ? 1 : v===3012 ? 2 : null) :
+    param === "Firmware"       ? series.map(v => v!=null ? v/2500 : null) :
+    param === "Health_Errors"  ? series.map(v => v!=null ? v/2000 : null) :
+    param === "Health_Missed"  ? series.map(v => v!=null ? v/2000 : null) :
+    param === "Meta_Serial"    ? series.map(v => v!=null ? v/50 : null) :
+    param === "Restarted"      ? series.map(v => v!=null ? v*10 : null) :
+    param === "Rf_Hops"        ? series.map(v => v!=null ? v/2 : null) :
+    param === "Rf_Latency"     ? series.map(v => v!=null ? v/10000 : null) :
+    param === "Rf_Retries"     ? series.map(v => v!=null ? v*10 : null) :
+    param === "Rf_Time_Ack"    ? series.map(v => v!=null ? v/1000 : null) :
+    param === "Rf_Time_Answer" ? series.map(v => v!=null ? v/1000 : null) :
+    param === "Set_Angle"      ? series.map(v => v!=null ? (v+60)/24 : null) :
+    param === "Set_Motor_Control" ? series.map(v => v!=null ? v/100 : null) :
+    param === "Supply_Voltage" ? series.map(v => v!=null ? v/12 : null) :
+    param === "Uptime"         ? series.map(v => v!=null ? v/15000 : null) :
+    param === "Rf_RSSI_dBm"    ? series.map(v => v!=null ? (v+110)/15 : null) :
+    param === "Error_Flags"    ? series.map(v => v!=null && v>0 ? 3 : 0) :
+    param === "Angle_Diff"     ? series.map(v => v!=null ? ((v-2.5)/2)+3 : null) :
+                                 series;
+
+  return Array.from({length: 24}, (_, i) => ({
+    x: `${i.toString().padStart(2,"0")}:00`,
+    y: scaled[i] ?? null,
+    original: series[i] ?? null
+  }));
+}
+
 function toggleChannels(element) {
   const list = element.nextElementSibling;
   list.classList.toggle("hidden");
@@ -105,6 +311,7 @@ function randomData() {
   return data;
 }
 
+// Chart aufbauen
 function setupChart() {
   const ctx = document.getElementById("lineChart").getContext("2d");
 
@@ -114,56 +321,22 @@ function setupChart() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: {
-        duration: 400,
-        easing: "easeInOutQuad"
-      },
-      layout: {
-        padding: {
-          top: 25,
-          bottom: 50
-        }
-      },
-      interaction: {
-        mode: "index",
-        intersect: false
-      },
-      hover: {
-        mode: "index",
-        intersect: false
-      },
+      animation: { duration: 400, easing: "easeInOutQuad" },
+      layout: { padding: { top: 25, bottom: 50 } },
+      interaction: { mode: "index", intersect: false },
+      hover: { mode: "index", intersect: false },
       elements: {
-        point: {
-          radius: 4,
-          hoverRadius: 6,
-          backgroundColor: "#fff",
-          borderWidth: 2
-        },
-        line: {
-          tension: 0.1
-        }
+        point: { radius: 4, hoverRadius: 6, backgroundColor: "#fff", borderWidth: 2 },
+        line: { tension: 0.1 }
       },
       scales: {
         x: {
           type: "category",
-          title: {
-            display: true,
-            text: "Uhrzeit"
-          },
+          title: { display: true, text: "Uhrzeit" },
           labels: Array.from({ length: 25 }, (_, i) => `${i.toString().padStart(2, "0")}:00`),
-          ticks: {
-            maxTicksLimit: 25,
-            autoSkip: false
-          }
+          ticks: { maxTicksLimit: 25, autoSkip: false }
         },
-        y: {
-          min: 0,
-          max: 5,
-          title: {
-            display: true,
-            text: "Wert"
-          }
-        }
+        y: { min: 0, max: 5, title: { display: true, text: "Wert" } }
       },
       plugins: {
         legend: {
@@ -173,52 +346,96 @@ function setupChart() {
             const meta = chart.getDatasetMeta(index);
             meta.hidden = !meta.hidden;
             chart.update();
+            updateInfoOutput();
           }
         },
         tooltip: {
-          mode: "index",
-          intersect: false,
-          backgroundColor: "rgba(30,30,30,0.9)",
-          titleColor: "#fff",
-          bodyColor: "#fff",
-          borderColor: "#aaa",
-          borderWidth: 1,
-          cornerRadius: 6,
-          padding: 12,
-          titleFont: {
-            size: 14,
-            weight: "bold"
-          },
-          bodyFont: {
-            size: 13
-          },
-          displayColors: true,
-          callbacks: {
-            title: function (tooltipItems) {
-              return `Zeit: ${tooltipItems[0].label}`;
-            },
-            label: function (tooltipItem) {
-              const label = tooltipItem.dataset.label;
-              const point = tooltipItem.raw;
-              const value = point?.original ?? tooltipItem.formattedValue;
-
-              const unit = getUnit(label);
-              let displayValue = value;
-
-              // Wenn keine Einheit --> ganze Zahl ohne Kommastellen
-              if (unit === "") {
-                return `${label}: ${Math.round(value)}`;
-              }
-            
-              // Wenn Einheit --> ganze Zahl mit 0 Nachkommastellen
-              if (!isNaN(value)) {
-                displayValue = parseFloat(value).toFixed(3);
-              }
-            
-              const hasUnitInLabel = /\[.*?\]$/.test(label);
-              const unitSuffix = hasUnitInLabel ? "" : unit;
-              return `${label}: ${displayValue}${unitSuffix}`;
+          enabled: false, 
+          external: (ctx) => {
+            let el = document.getElementById("ext-tooltip");
+            if (!el) {
+              el = document.createElement("div");
+              el.id = "ext-tooltip";
+              el.style.position = "absolute";
+              el.style.pointerEvents = "none";
+              el.style.background = "rgba(30,30,30,0.9)";
+              el.style.color = "#fff";
+              el.style.border = "1px solid #aaa";
+              el.style.borderRadius = "8px";
+              el.style.padding = "12px";
+              el.style.font = "13px Arial, sans-serif";
+              el.style.zIndex = 1000;
+              el.style.opacity = 0;
+              document.body.appendChild(el);
+              el._x = 0; el._y = 0; el._tx = 0; el._ty = 0;
+              const lerp = (a, b, t) => a + (b - a) * t;
+              const tick = () => {
+                el._x = lerp(el._x, el._tx, 0.2);
+                el._y = lerp(el._y, el._ty, 0.2);
+                el.style.left = `${Math.round(el._x)}px`;
+                el.style.top  = `${Math.round(el._y)}px`;
+                requestAnimationFrame(tick);
+              };
+              requestAnimationFrame(tick);
             }
+
+            const t = ctx.tooltip;
+            if (!t || t.opacity === 0 || !t.dataPoints || !t.dataPoints.length) {
+              el.style.opacity = 0;
+              return;
+            }
+
+            const canvasRect = ctx.chart.canvas.getBoundingClientRect();
+            const rawX = canvasRect.left + window.scrollX + t.caretX + 12;
+            const rawY = canvasRect.top  + window.scrollY + t.caretY + 12;
+
+            const dataIndex = t.dataPoints[0].dataIndex;
+            const xLabels = ctx.chart.options.scales?.x?.labels || [];
+            const timeLabel = xLabels[dataIndex] || "";
+
+            const lines = [];
+            lines.push(`<div style="font-weight:bold;margin-bottom:6px;">Zeit: ${timeLabel}</div>`);
+
+            ctx.chart.data.datasets.forEach((ds, i) => {
+              const meta = ctx.chart.getDatasetMeta(i);
+              if (meta.hidden) return;
+
+              const p = ds.data?.[dataIndex];
+              const raw = (p && (p.original ?? p.y)) ?? null;
+
+              let valueTxt = "null";
+              if (raw !== null && raw !== undefined && raw !== "null" && !Number.isNaN(raw)) {
+                if (ds.label.includes("Restarted")) {
+                  valueTxt = parseFloat(raw).toFixed(3);
+                } else {
+                  const hasUnitInLabel = /\[.*?\]$/.test(ds.label);
+                  let v = raw;
+                  if (!isNaN(v)) v = parseFloat(v).toFixed(3);
+                  valueTxt = hasUnitInLabel ? `${v}` : `${v}${getUnit(ds.label)}`;
+                }
+              }
+
+              const color = ds.borderColor || ds.backgroundColor || "#999";
+              lines.push(`
+                <div style="display:flex;align-items:center;gap:8px;margin:2px 0;">
+                  <span style="display:inline-block;width:10px;height:10px;background:${color};border:1px solid #ccc;"></span>
+                  <span>${ds.label}: ${valueTxt}</span>
+                </div>
+              `);
+            });
+
+            el.innerHTML = lines.join("");
+
+            const maxLeft = window.scrollX + document.documentElement.clientWidth  - el.offsetWidth  - 8;
+            const maxTop  = window.scrollY + document.documentElement.clientHeight - el.offsetHeight - 8;
+
+            const wantTop = rawY + el.offsetHeight > window.scrollY + window.innerHeight - 8;
+            const targetY = wantTop ? (canvasRect.top + window.scrollY + t.caretY - el.offsetHeight - 12) : rawY;
+
+            el._tx = Math.min(Math.max(8 + window.scrollX, rawX), maxLeft);
+            el._ty = Math.min(Math.max(8 + window.scrollY, targetY), maxTop);
+
+            el.style.opacity = 1;
           }
         }
       }
@@ -242,11 +459,9 @@ function addGraph(label, color) {
 
   chart.data.datasets.push(newDataset);
   chartData[label] = newDataset;
-  chart.options.plugins.tooltip.enabled = false;
   chart.update();
 
   setTimeout(() => {
-    chart.options.plugins.tooltip.enabled = true;
     chart.update();
   }, 50);
 
@@ -303,6 +518,7 @@ function downloadChartAsPNG() {
   link.click();
 }
 
+// Download als CSV
 function downloadChartAsCSV() {
   const headers = ["Uhrzeit", ...Object.keys(chartData)];
   const rows = [];
@@ -312,7 +528,6 @@ function downloadChartAsCSV() {
     const values = Object.keys(chartData).map(label => {
       const point = chartData[label].data[i];
       const raw = point?.original ?? point?.y ?? "";
-      // Stelle sicher, dass es ein "echter" Zahlwert ist
       return typeof raw === "number" ? raw.toString().replace(".", ",") : "";
     });
     rows.push([time, ...values]);
@@ -332,50 +547,102 @@ function downloadChartAsCSV() {
 
 function updateInfoOutput() {
   const container = document.querySelector(".info-output");
-  const allValues = Object.values(chartData).flatMap(ds =>
-  ds.data.map(p => ({
-    value: p.original ?? p.y, // wenn original vorhanden, nimm den
-    label: ds.label
-    }))
-  );
 
-  if (allValues.length === 0) {
+  if (!chart || !chart.data || !Array.isArray(chart.data.datasets)) {
     container.innerHTML = "";
     return;
   }
 
-  const numericValues = allValues.filter(p => typeof p.value === "number");
+  const groups = new Map(); 
+  chart.data.datasets.forEach((ds, i) => {
+    const meta = chart.getDatasetMeta(i);
+    if (meta && meta.hidden) return; 
 
-  if (numericValues.length === 0) {
+    const base = (ds.label || "").split(" ")[0] || "";
+    const dot = base.lastIndexOf(".");
+    if (dot === -1) return;
+    const param = base.slice(dot + 1); 
+
+    if (!groups.has(param)) {
+      groups.set(param, []);
+    }
+    groups.get(param).push(ds);
+  });
+
+  if (groups.size === 0) {
     container.innerHTML = "<div>Keine gültigen Daten</div>";
     return;
   }
 
-  const max = numericValues.reduce((a, b) => (a.value > b.value ? a : b));
-  const min = numericValues.reduce((a, b) => (a.value < b.value ? a : b));
+  const fmtVal = (param, val) => {
+    if (!Number.isFinite(val)) return "null";
+    const decimals = (param === "Restarted") ? 3 : 2;
+    const unit = getUnit(param) || "";
+    return `${val.toFixed(decimals)}${unit}`;
+  };
 
-  container.innerHTML = `
-    <div>Höchster AVG: ${max.value.toFixed(2)} - ${max.label}</div>
-    <div>Niedrigster AVG: ${min.value.toFixed(2)} - ${min.label}</div>
-  `;
+  let html = '<div style="display:flex; flex-wrap:wrap; gap:12px; align-items:stretch;">';
+
+  Array.from(groups.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([param, datasets]) => {
+      let globalMax = { value: -Infinity, label: "" };
+      let globalMin = { value: +Infinity, label: "" };
+
+      datasets.forEach(ds => {
+        (ds.data || []).forEach(p => {
+          const raw = (p && (p.original ?? p.y));
+          if (typeof raw === "number" && !Number.isNaN(raw)) {
+            if (raw > globalMax.value) {
+              globalMax.value = raw;
+              globalMax.label = ds.label;
+            }
+            if (raw < globalMin.value) {
+              globalMin.value = raw;
+              globalMin.label = ds.label;
+            }
+          }
+        });
+      });
+
+      if (!Number.isFinite(globalMax.value) || !Number.isFinite(globalMin.value)) return;
+
+      html += `
+        <div style="
+          flex: 1 1 calc(33.333% - 12px);
+          min-width: 280px;
+          background: #f9f9f9;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          padding: 8px 10px;
+          box-sizing: border-box;
+        ">
+          <div style="font-weight:600; margin-bottom:4px;">${param}</div>
+          <div>Höchster Wert: ${fmtVal(param, globalMax.value)} - ${globalMax.label}</div>
+          <div>Niedrigster Wert: ${fmtVal(param, globalMin.value)} - ${globalMin.label}</div>
+        </div>
+      `;
+    });
+
+  html += "</div>";
+  container.innerHTML = html;
 }
 
 document.querySelectorAll(".channel").forEach(el => {
   el.addEventListener("mousedown", e => {
-    e.preventDefault(); // verhindert Text markieren
+    e.preventDefault(); 
   });
 
   el.addEventListener("click", e => {
-    e.stopPropagation(); // ✅ Verhindert, dass der globale Klick das Popup wieder schließt!
+    e.stopPropagation(); 
 
     const container = e.currentTarget;
     const label = container.dataset.id;
 
     if (!label) return;
 
-    // Aasanurme-Motor_Current_Max → aufsplitten
     const anlage = label.split("-")[0];
-    const channel = label.substring(anlage.length + 1); // alles nach dem ersten "-"
+    const channel = label.substring(anlage.length + 1);
 
     console.log("Anlage:", anlage);
     console.log("Channel:", channel);
@@ -393,7 +660,6 @@ document.querySelectorAll(".resolution-btn").forEach(btn => {
   });
 });
 
-// DATUMS-LOGIK
 function updateDateDisplay() {
   const display = document.querySelector(".left-controls input");
   const day = selectedDate.getDate().toString().padStart(2, "0");
@@ -402,214 +668,68 @@ function updateDateDisplay() {
   display.value = `${day}.${month}.${year}`;
 }
 
-function loadDataForDate(date) {
-  loadedTrackerData = {};
-  const parameters = ["motor_current_max", "chip_temp", "angle"];
-
-  Promise.all(
-    parameters.map(param =>
-      fetch(`http://localhost:5000/api/${param}?date=${date.toISOString().slice(0, 10)}`)
-        .then(res => res.json())
-        .then(data => ({ param, data }))
-    )
-  )
-    .then(results => {
-      loadedTrackerData = {};
-
-      results.forEach(({ param, data }) => {
-        if (!data || typeof data !== "object") return;
-
-        Object.keys(data).forEach(key => {
-          const [paramName, index] = key.split("-");
-          const sites = ["Aasanurme", "Augusta", "Babimost", "Besingrand", "Calarasi"];
-
-          sites.forEach(site => {
-            const newKey = `${site}-${index}.${paramName}`;
-            loadedTrackerData[newKey] = data[key];
-          });
-        });
-      });
-
-      activeTrackerLabels.forEach(label => {
-        if (chartData[label]) {
-          const trackerId = label.split("-").slice(1).join("-");
-          const param = trackerId.split(".")[1];
-          const index = trackerId.split(".")[0];
-          const key = `${param}-${index}`;
-          const baseColor = trackerColors[key] || "#000000";
-        }
-      });
-
-      chart.update();
-
-      setTimeout(() => {
-        activeTrackerLabels.forEach(label => {
-          const data = loadedTrackerData[label];
-          if (!data) return;
-
-          const trackerId = label.split("-").slice(1).join("-");
-          const param = trackerId.split(".")[1];
-          const index = trackerId.split(".")[0];
-          const key = `${param}-${index}`;
-          const originalData = data;
-
-          const scaledData =
-            param === "Chip_Temp"
-              ? data.map(v => (v !== null ? v / 8 : null))
-              : param === "Angle"
-              ? data.map(v => (v !== null ? (v + 60) / 24 : null))
-              : param === "Last_Angle" 
-              ? data.map(v => (v !== null ? (v + 60) / 24 : null))
-              : param === "Device_Type"
-              ? data.map(v => (v === 3001 ? 1 : v === 3012 ? 2 : null))
-              : param === "Firmware"
-              ? data.map(v => (v !== null ? v / 2500 : null))
-              : param === "Health_Errors"
-              ? data.map(v => (v !== null ? v / 2000 : null))
-              : data;
-
-          const cleanedData = Array.from({ length: 24 }, (_, i) => ({
-            x: `${i.toString().padStart(2, "0")}:00`,
-            y: scaledData[i] !== undefined ? scaledData[i] : null,
-            original: data[i] !== undefined ? data[i] : null
-          }));
-
-          const hasValidY = cleanedData.some(point => point.y !== null);
-
-          if (!chartData[label]) {
-            chartData[label] = {
-              label: label,
-              data: [],
-              borderColor: trackerColors[key] || "#000000",
-              borderWidth: 2,
-              fill: false
-            };
-            chart.data.datasets.push(chartData[label]);
-          }
-
-          if (hasValidY) {
-            chartData[label].data = cleanedData;
-            const color = trackerColors[key] || "#000000";
-            chartData[label].borderColor = color;
-            chartData[label].backgroundColor = color;
-            chartData[label].pointBorderColor = color;
-            chartData[label].pointBackgroundColor = color;
-          } else {
-            console.warn(`⚠️ Keine gültigen Y-Daten für ${label}`);
-          }
-        });
-
-        chart.update();
-        updateInfoOutput();
-
-        const hasAnyData = Object.values(chartData).some(ds =>
-          ds.data.some(point => point.y !== null)
-        );
-
-        if (!hasAnyData) {
-          chart.data.datasets = []; // Diagramm leeren
-          chart.update();
-        }
-
-        hideLoader(); // ✅ Spinner am Ende sicher ausblenden
-      }, 500);
-    })
-    .catch(err => {
-      console.error("Fehler beim Laden:", err);
-      hideLoader(); // ✅ Auch bei Fehlern ausblenden
-    });
-
+// Daten für den Tag laden
+async function loadDataForDate(dateObj) {
+  const dateStr = dateObj.toISOString().slice(0,10);
   updateDateDisplay();
   populateDateSelectors();
 
-  if (activeTrackerLabels.size > 0) {
-    const dateStr = date.toISOString().slice(0, 10);
-    const trackersToReload = Array.from(activeTrackerLabels);
+  const labelsToLoad = Array.from(activeTrackerLabels || []);
+  if (labelsToLoad.length === 0) { hideLoader?.(); return; }
 
-    fetch("http://localhost:5000/api/data", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        trackers: trackersToReload,
-        date: dateStr,
-        forceReload: false
+  const groupMap = new Map(); 
+  for (const label of labelsToLoad) {
+    const site = getSiteFromLabel(label);            
+    const param = getParamFromLabel(label);         
+    const key = `${site}|${param}`;
+    if (!groupMap.has(key)) groupMap.set(key, {site, param, labels: []});
+    groupMap.get(key).labels.push(label);
+  }
+
+  try {
+    const results = await Promise.all(
+      Array.from(groupMap.values()).map(({site, param, labels}) => {
+    
+        const trackersCsv = encodeURIComponent(labels.join(","));
+        const url =
+          `${API_BASE}/${encodeURIComponent(param.toLowerCase())}` +
+          `?date=${encodeURIComponent(dateStr)}` +
+          `&site=${encodeURIComponent(site)}` +
+          `&trackers=${trackersCsv}`;
+      
+        return fetch(url)
+          .then(r => {
+            if (!r.ok) throw new Error(`GET ${param} ${r.status} ${r.statusText}`);
+            return r.json();
+          })
+          .then(data => ({ site, param, data }));
       })
-    })
-      .then(res => res.json())
-      .then(backendData => {
-        trackersToReload.forEach(label => {
-          const data = backendData[label];
-          if (!data || !Array.isArray(data)) return;
+    );
 
-          const [anlage, paramRaw] = label.split("-");
-          const [index, param] = paramRaw.split(".");
-          const key = `${param}-${index}`;
-          const unit = getUnit(param);
-          const originalData = data;
+    for (const {site, param, data} of results) {
+      const keyBase = `${site}|${param}`;
+      const {labels} = groupMap.get(keyBase);
 
-          const scaledData =
-            param === "Chip_Temp"
-              ? data.map(v => (v !== null ? v / 8 : null))
-              : param === "Angle"
-              ? data.map(v => (v !== null ? (v + 60) / 24 : null))
-              : param === "Last_Angle"  
-              ? data.map(v => (v !== null ? (v + 60) / 24 : null))
-              : param === "Device_Type"
-              ? data.map(v => (v === 3001 ? 1 : v === 3012 ? 2 : null))
-              : param === "Firmware"
-              ? data.map(v => (v !== null ? v / 2500 : null))
-              : param === "Health_Errors"
-              ? data.map(v => (v !== null ? v / 2000 : null))
-              : data;
+      for (const label of labels) {
+        const idx = label.split("-")[1].split(".")[0];    
+        const backendKey = `${param}-${idx}`;            
+        const series = data?.[backendKey];
+        if (!Array.isArray(series) || series.length === 0) continue;
 
-          const cleanedData = Array.from({ length: 24 }, (_, i) => ({
-            x: `${i.toString().padStart(2, "0")}:00`,
-            y: scaledData[i] ?? null,
-            original: originalData[i] ?? null
-          }));
+        const points = seriesToPoints(series, param);
+        const colorKey = `${param}-${idx}`;
+        const color = trackerColors[colorKey] || "#000000";
+        const ds = ensureDataset(label, color, getUnit(param));
+        ds.data = points;
+      }
+    }
 
-          const hasValidY = cleanedData.some(point => point.y !== null);
-          const color = trackerColors[key] || "#000000";
-
-          if (!chartData[label]) {
-            chartData[label] = {
-              label: `${label} ${unit}`.trim(),
-              data: [],
-              borderColor: color,
-              backgroundColor: color,
-              pointBorderColor: color,
-              pointBackgroundColor: color,
-              borderWidth: 2,
-              tension: 0.2,
-              fill: false
-            };
-            chart.data.datasets.push(chartData[label]);
-          }
-
-          chartData[label].data = hasValidY ? cleanedData : [];
-        });
-
-        chart.update();
-        updateInfoOutput();
-
-        const hasAnyData = Object.values(chartData).some(ds =>
-          ds.data.some(point => point.y !== null)
-        );
-
-        if (!hasAnyData) {
-          chart.data.datasets = [];
-          chart.update();
-        }
-
-        hideLoader(); // ✅ auch hier am Ende
-      })
-      .catch(err => {
-        console.error("❌ Fehler beim automatischen Reload:", err);
-        hideLoader(); // ✅ auch hier
-      });
-  } else {
-    // 🔁 Keine aktiven Tracker → Spinner trotzdem beenden!
-    hideLoader();
+    chart.update();
+    updateInfoOutput();
+  } catch (e) {
+    console.error("Fehler bei loadDataForDate:", e);
+  } finally {
+    hideLoader?.();
   }
 }
 
@@ -649,34 +769,30 @@ function populateDateSelectors() {
   }
 }
 
-// Dropdown-Wechsel
 ["day-select", "month-select", "year-select"].forEach(id => {
   document.getElementById(id).addEventListener("change", () => {
     const day = parseInt(document.getElementById("day-select").value);
     const month = parseInt(document.getElementById("month-select").value);
     const year = parseInt(document.getElementById("year-select").value);
 
-    // ✅ Verhindert 1-Tages-Verschiebung durch Zeitzonenprobleme
     selectedDate = new Date(year, month, day, 12); 
 
-    // ✅ Spinner anzeigen wie bei < / > Navigation
     showLoader();
 
-    // ✅ Lädt alle aktiven Tracker-Daten automatisch
     loadDataForDate(selectedDate);
   });
 });
 
-// Pfeiltasten < >
+// Pfeiltasten 
 document.querySelector(".left-controls button:nth-child(1)").addEventListener("click", () => {
   selectedDate.setDate(selectedDate.getDate() - 1);
-  showLoader(); // ✨ Spinner anzeigen
+  showLoader(); 
   loadDataForDate(selectedDate);
 });
 
 document.querySelector(".left-controls button:nth-child(3)").addEventListener("click", () => {
   selectedDate.setDate(selectedDate.getDate() + 1);
-  showLoader(); // ✨ Spinner anzeigen
+  showLoader(); 
   loadDataForDate(selectedDate);
 });
 
@@ -684,50 +800,40 @@ document.addEventListener("DOMContentLoaded", () => {
   setupChart();
   populateDateSelectors();
   updateDateDisplay();
-  loadDataForDate(selectedDate); // ✅ Diese Zeile hinzufügen!
+  loadDataForDate(selectedDate);
+  renderSidebar();
 });
 
-// Auf heutiges Datum springen
+// Heute-Button
 document.getElementById("today-button").addEventListener("click", () => {
   selectedDate = new Date();
   loadDataForDate(selectedDate);
 });
 
-// TRACKER-POPUP
-function openTrackerPopup(elem, anlage, channel) {
-  console.log("🚀 openTrackerPopup() aufgerufen");
-  console.log("Anlage:", anlage);
-  console.log("Channel:", channel);
+function isAtOrAfterRestarted(elem) {
+  const list = elem.closest(".channel-list");
+  if (!list) return false;
+  const channels = Array.from(list.querySelectorAll(".channel"));
+  const restartedEl = channels.find(c => c.dataset.id && c.dataset.id.endsWith("-Restarted"));
+  if (!restartedEl) return false;
+  const idx = channels.indexOf(elem);
+  const idxRestarted = channels.indexOf(restartedEl);
+  return idx >= idxRestarted; 
+}
 
+function openTrackerPopup(elem, anlage, channel) {
   const popup = document.querySelector(".tracker-popup");
-  console.log("Popup-Element:", popup); // ✅ jetzt korrekt!
 
   const alreadyOpen = !popup.classList.contains("hidden");
-  const currentLeft = parseInt(popup.style.left, 10);
-  const currentTop = parseInt(popup.style.top, 10);
   const rect = elem.getBoundingClientRect();
-  const targetLeft = Math.round(rect.left + window.scrollX);
-  const targetTop = Math.round(rect.bottom + window.scrollY);
-
-  if (alreadyOpen && currentLeft === targetLeft && currentTop === targetTop) {
-    popup.classList.add("hidden");
-
-    // 🔁 Pfeil zurück auf ">"
-    const toggleIcon = elem.querySelector(".tracker-toggle");
-    if (toggleIcon) toggleIcon.textContent = ">";
-
-    return;
-  } 
-
-  closeAllPopups();
+  const placeAbove = isAtOrAfterRestarted(elem);
 
   const list = popup.querySelector(".tracker-list");
   list.innerHTML = "";
-
-  const trackers = Array.from({ length: 19 }, (_, i) =>
+  const count = trackerCounts[anlage] || 40;
+  const trackers = Array.from({ length: count }, (_, i) =>
     `${anlage}-${(i + 1).toString().padStart(3, "0")}.${channel}`
   );
-
   trackers.forEach(name => {
     const row = document.createElement("div");
     const checkbox = document.createElement("input");
@@ -744,9 +850,43 @@ function openTrackerPopup(elem, anlage, channel) {
     list.appendChild(row);
   });
 
-  popup.style.top = `${targetTop}px`;
-  popup.style.left = `${targetLeft}px`;
+  const prevVis = popup.style.visibility;
+  const prevDisplayHidden = popup.classList.contains("hidden");
+  popup.style.visibility = "hidden";
   popup.classList.remove("hidden");
+
+  const popupWidth  = popup.offsetWidth || 300;
+  const popupHeight = popup.offsetHeight || 350;
+
+  let targetLeft = Math.round(rect.left + window.scrollX);
+  const maxLeft = window.scrollX + document.documentElement.clientWidth - popupWidth - 10;
+  targetLeft = Math.min(targetLeft, maxLeft);
+  targetLeft = Math.max(targetLeft, 10);
+
+  let targetTop = placeAbove
+    ? Math.round(rect.top + window.scrollY) - popupHeight
+    : Math.round(rect.bottom + window.scrollY);
+
+  targetTop = Math.max(targetTop, 10);
+
+  const currentLeft = parseInt(popup.style.left, 10);
+  const currentTop  = parseInt(popup.style.top, 10);
+  if (
+    alreadyOpen &&
+    currentLeft === targetLeft &&
+    currentTop === targetTop
+  ) {
+    popup.classList.add("hidden");
+    popup.style.visibility = prevVis || "";
+    const toggleIcon = elem.querySelector(".tracker-toggle");
+    if (toggleIcon) toggleIcon.textContent = ">";
+    return;
+  }
+
+  popup.style.left = `${targetLeft}px`;
+  popup.style.top  = `${targetTop}px`;
+  popup.style.visibility = ""; 
+
   const toggleIcon = elem.querySelector(".tracker-toggle");
   if (toggleIcon) toggleIcon.textContent = "<";
 }
@@ -783,6 +923,7 @@ function deselectAllTrackers(btn) {
   });
 }
 
+// Tracker adden
 function addSelectedTrackers(btn) {
   const popup = btn.closest(".tracker-popup");
   const checkboxes = popup.querySelectorAll("input[type=checkbox]");
@@ -798,12 +939,15 @@ function addSelectedTrackers(btn) {
 
   const dateStr = selectedDate.toISOString().slice(0, 10);
 
+  const site = trackersToFetch[0].split("-")[0];
+
   fetch("http://localhost:5000/api/data", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       trackers: trackersToFetch,
-      date: dateStr
+      date: dateStr,
+      site: site
     })
   })
     .then(res => res.json())
@@ -838,6 +982,36 @@ function addSelectedTrackers(btn) {
             ? data.map(v => (v !== null ? v / 2500 : null))
             : param === "Health_Errors"
             ? data.map(v => (v !== null ? v / 2000 : null))
+            : param === "Health_Missed"
+            ? data.map(v => (v !== null ? v / 2000 : null))
+            : param === "Meta_Serial"
+            ? data.map(v => (v !== null ? v / 50 : null))
+            : param === "Restarted"
+            ? data.map(v => (v !== null ? v * 10 : null))
+            : param === "Rf_Hops"
+            ? data.map(v => (v !== null ? v / 2 : null))
+            : param === "Rf_Latency"
+            ? data.map(v => (v !== null ? v / 10000 : null))
+            : param === "Rf_Retries"
+            ? data.map(v => (v !== null ? v * 10 : null))
+            : param === "Rf_Time_Ack"
+            ? data.map(v => (v !== null ? v / 1000 : null))
+            : param === "Rf_Time_Answer"
+            ? data.map(v => (v !== null ? v / 1000 : null))
+            : param === "Set_Angle"
+            ? data.map(v => (v !== null ? (v + 60) / 24 : null))
+            : param === "Set_Motor_Control"
+            ? data.map(v => (v !== null ? v / 100 : null))
+            : param === "Supply_Voltage"
+            ? data.map(v => (v !== null ? v / 12 : null))
+            : param === "Uptime"
+            ? data.map(v => (v !== null ? v / 15000 : null))
+            : param === "Rf_RSSI_dBm"
+            ? data.map(v => (v !== null ? (v + 110) / 15 : null))
+            : param === "Error_Flags"
+            ? data.map(v => (v !== null && v > 0 ? 3 : 0))
+            : param === "Angle_Diff"
+            ? data.map(v => (v !== null ? ((v - 2.5) / 2) + 3 : null))
             : data;
 
         const cleanedData = Array.from({ length: 24 }, (_, i) => ({
@@ -854,7 +1028,6 @@ function addSelectedTrackers(btn) {
           return;
         }
 
-        // Tracker NEU hinzufügen
         chartData[label] = {
           label: `${label} ${unit}`.trim(),
           data: [],
@@ -892,112 +1065,78 @@ function addSelectedTrackers(btn) {
     });
 }
 
-function reloadActiveTrackers() {
-  if (activeTrackerLabels.size === 0) {
-    alert("Keine Tracker aktiv!");
+async function reloadActiveTrackers() {
+  if (!activeTrackerLabels || activeTrackerLabels.size === 0) {
+    console.warn("Keine aktiven Tracker – nichts zu reloaden.");
     return;
   }
+  showLoader?.();
 
-  showLoader(); // ✨ Zeige Spinner
+  const groupMap = new Map();
+  for (const label of activeTrackerLabels) {
+    const site = getSiteFromLabel(label);
+    const param = getParamFromLabel(label);
+    const key = `${site}|${param}`;
+    if (!groupMap.has(key)) groupMap.set(key, { site, param, labels: [] });
+    groupMap.get(key).labels.push(label);
+  }
 
-  const dateStr = selectedDate.toISOString().slice(0, 10);
-  const trackersToReload = Array.from(activeTrackerLabels);
+  const dateStr = selectedDate.toISOString().slice(0,10);
 
-  fetch("http://localhost:5000/api/data", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      trackers: trackersToReload,
-      date: dateStr,
-      forceReload: true
-    })
-  })
-    .then(res => res.json())
-    .then(backendData => {
-      trackersToReload.forEach(label => {
-        const data = backendData[label];
-        if (!data || !Array.isArray(data)) {
-          console.warn(`⚠️ Keine oder ungültige Reload-Daten für ${label}`);
-          return;
-        }
+  try {
+    const results = await Promise.all(
+      Array.from(groupMap.values()).map(({site, param, labels}) => {
+        const trackersCsv = encodeURIComponent(labels.join(","));
+        const url =
+          `${API_BASE}/${encodeURIComponent(param.toLowerCase())}` +
+          `?date=${encodeURIComponent(dateStr)}` +
+          `&site=${encodeURIComponent(site)}` +
+          `&trackers=${trackersCsv}` +
+          `&force=1`; 
+      
+        return fetch(url)
+          .then(r => {
+            if (!r.ok) throw new Error(`GET ${param} ${r.status} ${r.statusText}`);
+            return r.json();
+          })
+          .then(data => ({ site, param, data }));
+      })
+    );
 
-        const [anlage, paramRaw] = label.split("-");
-        const [index, param] = paramRaw.split(".");
-        const key = `${param}-${index}`;
-        const originalData = data;
-        const unit = getUnit(param);
+    for (const {site, param, data} of results) {
+      const labels = groupMap.get(`${site}|${param}`).labels;
+      for (const label of labels) {
+        const idx = label.split("-")[1].split(".")[0];
+        const backendKey = `${param}-${idx}`;
+        const series = data?.[backendKey];
+        if (!Array.isArray(series) || series.length === 0) continue;
 
-        const scaledData =
-          param === "Chip_Temp"
-            ? data.map(v => (v !== null ? v / 8 : null))
-            : param === "Angle"
-            ? data.map(v => (v !== null ? (v + 60) / 24 : null))
-            : param === "Last_Angle"  
-            ? data.map(v => (v !== null ? (v + 60) / 24 : null))
-            : param === "Device_Type"
-            ? data.map(v => (v === 3001 ? 1 : v === 3012 ? 2 : null))
-            : param === "Firmware"
-            ? data.map(v => (v !== null ? v / 2500 : null))
-            : param === "Health_Errors"
-            ? data.map(v => (v !== null ? v / 2000 : null))
-            : data;
+        const points = seriesToPoints(series, param);
+        const color = trackerColors[`${param}-${idx}`] || "#000000";
+        const ds = ensureDataset(label, color, getUnit(param));
+        ds.data = points;
+      }
+    }
 
-        const cleanedData = Array.from({ length: 24 }, (_, i) => ({
-          x: `${i.toString().padStart(2, "0")}:00`,
-          y: scaledData[i] ?? null,
-          original: originalData[i] ?? null
-        }));
-
-        const hasValidY = cleanedData.some(point => point.y !== null);
-        const color = trackerColors[key] || "#000000";
-
-        if (!chartData[label]) {
-          chartData[label] = {
-            label: `${label} ${unit}`.trim(),
-            data: [],
-            borderColor: color,
-            backgroundColor: color,
-            pointBorderColor: color,
-            pointBackgroundColor: color,
-            borderWidth: 2,
-            tension: 0.2,
-            fill: false
-          };
-          chart.data.datasets.push(chartData[label]);
-        }
-
-        chartData[label].borderColor = color;
-        chartData[label].backgroundColor = color;
-        chartData[label].pointBorderColor = color;
-        chartData[label].pointBackgroundColor = color;
-        chartData[label].data = hasValidY ? cleanedData : [];
-      });
-
-      chart.update();
-      updateInfoOutput();
-    })
-    .catch(err => {
-      console.error("❌ Fehler beim Reload:", err);
-    })
-    .finally(() => {
-      hideLoader(); // ✨ Verstecke Spinner
-    });
+    chart.update();
+    updateInfoOutput();
+  } catch (e) {
+    console.error("Reload-Fehler:", e);
+  } finally {
+    hideLoader?.();
+  }
 }
 
 function closeMultiDownload() {
-  // Modal ausblenden
   document.getElementById("multiDownloadModal").classList.add("hidden");
 
-  // Alle Checkboxen zurücksetzen
   document.querySelectorAll("#multiDownloadModal input[type='checkbox']").forEach(cb => {
     cb.checked = false;
   });
 
-  // Datum zurücksetzen
   document.getElementById("startDate").value = "";
   document.getElementById("endDate").value = "";
 
-  // Enddatum Einschränkung zurücksetzen
   document.getElementById("endDate").removeAttribute("min");
   document.getElementById("endDate").removeAttribute("max");
 }
@@ -1016,7 +1155,6 @@ document.getElementById("startDate").addEventListener("change", () => {
   endInput.min = minDate;
   endInput.max = maxDate;
 
-  // Falls bereits ausgewähltes Enddatum ungültig ist, löschen
   if (new Date(endInput.value) < start || new Date(endInput.value) > maxDateObj) {
     endInput.value = "";
   }
@@ -1033,100 +1171,50 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-document.getElementById("confirmDownload").addEventListener("click", async () => {
-  const startDate = document.getElementById("startDate").value;
-  const endDate = document.getElementById("endDate").value;
+document.getElementById("confirmDownload").addEventListener("click", function () {
+    const selectedSites = Array.from(document.querySelectorAll('#multiDownloadModal .modal-section:nth-child(1) input[type="checkbox"]:checked'))
+        .map(cb => cb.nextSibling.textContent.trim());
+    
+    const selectedChannels = Array.from(document.querySelectorAll('#multiDownloadModal .modal-section:nth-child(2) input[type="checkbox"]:checked'))
+        .map(cb => cb.nextSibling.textContent.trim().split(" ")[0]);
 
-  if (!startDate || !endDate) {
-    alert("Bitte Start- und Enddatum wählen!");
-    return;
-  }
+    const startDate = document.getElementById("startDate").value;
+    const endDate = document.getElementById("endDate").value;
 
-  const zip = new JSZip();
-
-  // ✅ Liste der ausgewählten Channels
-  const selectedChannels = Array.from(
-    document.querySelectorAll("#multiDownloadModal .modal-section:nth-child(2) input[type='checkbox']:checked")
-  ).map(cb => cb.nextSibling?.textContent?.trim().replace(/\[.*?\]/g, "").trim());
-
-  if (selectedChannels.length === 0) {
-    alert("Bitte mindestens einen Channel auswählen!");
-    return;
-  }
-
-  for (const channelKey of selectedChannels) {
-    const trackerIds = Array.from({ length: 19 }, (_, i) =>
-      `Aasanurme-${(i + 1).toString().padStart(3, "0")}.${channelKey}`
-    );
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const allDates = [];
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      allDates.push(new Date(d));
-    }
-
-    const rows = [];
-
-    for (const date of allDates) {
-      const isoDate = date.toISOString().slice(0, 10);
-
-      try {
-        const res = await fetch("http://localhost:5000/api/data", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            trackers: trackerIds,
-            date: isoDate,
-            forceReload: false
-          })
-        });
-
-        const data = await res.json();
-
-        for (let hour = 0; hour < 24; hour++) {
-          const row = [
-            isoDate,
-            `${hour.toString().padStart(2, "0")}:00`
-          ];
-
-          for (const trackerId of trackerIds) {
-            const values = data[trackerId];
-            row.push(values && values[hour] != null ? values[hour].toString().replace(".", ",") : "");
-          }
-
-          rows.push(row);
-        }
-      } catch (err) {
-        console.error(`❌ Fehler bei ${channelKey} am ${isoDate}`, err);
-        alert("Fehler beim Abrufen der Daten!");
+    if (!selectedSites.length || !selectedChannels.length || !startDate || !endDate) {
+        alert("Bitte mindestens eine Anlage, einen Channel und beide Daten auswählen!");
         return;
-      }
     }
 
-    const header = ["Datum", "Uhrzeit", ...trackerIds];
-    const csvContent = header.join(";") + "\n" + rows.map(r => r.join(";")).join("\n");
+    fetch("http://127.0.0.1:5000/multiple_download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            sites: selectedSites,
+            channels: selectedChannels,
+            start_date: startDate,
+            end_date: endDate
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error("Download-Fehler: " + response.status);
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `multiple_download_${startDate}_bis_${endDate}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
 
-    zip.file(`Aasanurme_${channelKey}_${startDate}_bis_${endDate}.csv`, csvContent);
-  }
-
-  // 🧷 ZIP bauen und herunterladen
-  const blob = await zip.generateAsync({ type: "blob" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `Aasanurme_Multiple_${startDate}_bis_${endDate}.zip`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  // 🧹 Fenster & Felder zurücksetzen
-  document.getElementById("multiDownloadModal").classList.add("hidden");
-  document.querySelectorAll("#multiDownloadModal input[type='checkbox']").forEach(cb => cb.checked = false);
-  document.getElementById("startDate").value = "";
-  document.getElementById("endDate").value = "";
-  document.getElementById("endDate").removeAttribute("min");
-  document.getElementById("endDate").removeAttribute("max");
+        closeMultiDownload();
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Fehler beim Download. Siehe Konsole.");
+    });
 });
 
 function animateChartRefresh() {
@@ -1143,4 +1231,32 @@ function showLoader() {
 
 function hideLoader() {
   document.getElementById("chart-loader").classList.add("hidden");
+}
+
+function getSiteFromLabel(label) {
+  return label.split("-", 1)[0]; 
+}
+function getParamFromLabel(label) {
+  return label.split(".").slice(1).join("."); 
+}
+function ensureDataset(label, color, unit) {
+  if (!chartData[label]) {
+    chartData[label] = {
+      label: `${label}${unit ? " " + unit : ""}`,
+      data: [],
+      borderWidth: 2,
+      tension: 0.2,
+      fill: false,
+      borderColor: color || "#000000",
+      backgroundColor: color || "#000000",
+      pointBorderColor: color || "#000000",
+      pointBackgroundColor: color || "#000000",
+    };
+    chart.data.datasets.push(chartData[label]);
+  }
+  return chartData[label];
+}
+function cleanPoints(series) {
+  if (!Array.isArray(series)) return [];
+  return series.filter(p => p && p.x != null && p.y != null && !Number.isNaN(p.y));
 }

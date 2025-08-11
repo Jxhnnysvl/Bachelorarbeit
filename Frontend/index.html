@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PV Tracker Visualisierung</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <div class="sidebar">
+      <h2>ANLAGEN</h2>
+
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button id="btn-add-site">Hinzufügen</button>
+        <button id="btn-clear-sites">Löschen</button>
+      </div>
+
+      <div id="anlagen-container">
+        <div style="color:#777; padding:6px 8px;">Noch keine Anlagen hinzugefügt.</div>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="chart-controls">
+        <div class="left-controls">
+          <button>&lt;</button>
+          <input type="text" value="15.07.2025" readonly />
+          <button>&gt;</button>
+          <button id="today-button">Heute</button>
+        </div>
+        <div class="center-controls">
+          <select id="day-select"></select>
+          <select id="month-select"></select>
+          <select id="year-select"></select>
+        </div>
+        <div class="right-controls">
+          <span>Resolution:</span>
+          <button class="resolution-btn active" data-resolution="1d">1d</button>
+        </div>
+      </div>
+
+      <div id="chart-container">
+        <canvas id="lineChart"></canvas>
+        <div id="chart-loader" class="hidden">
+          <div class="loader"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="extras">
+      <div class="info">Extra Informationen</div>
+      <div class="extra-content">
+        <div class="info-output"></div>
+        <div class="buttons">
+          <button onclick="removeAll()">Löschen</button>
+          <button onclick="openDownloadModal()">Download</button>
+          <button id="multiDownloadBtn">Multiple Download</button>
+          <button onclick="reloadActiveTrackers()">Reload</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tracker-popup hidden">
+    <div class="tracker-list"></div>
+    <div class="tracker-buttons">
+      <div class="left-buttons">
+        <button onclick="selectAllTrackers(this)">Select all</button>
+        <button onclick="deselectAllTrackers(this)">Select none</button>
+      </div>
+      <button onclick="addSelectedTrackers(this)">+ Add</button>
+    </div>
+  </div>
+
+  <div id="multiDownloadModal" class="hidden modal-overlay">
+    <div class="modal-window">
+      <div class="modal-section">
+        <h3>Anlagen</h3>
+        <input type="text" placeholder="Anlagen suchen..." class="modal-search" data-target="anlagen" />
+        <div class="scroll-list">
+          <label><input type="checkbox" /> Aasanurme</label><br />
+          <label><input type="checkbox" /> Augusta</label><br />
+          <label><input type="checkbox" /> Augustenberg</label><br />
+          <label><input type="checkbox" /> Bavendorf</label><br />
+          <label><input type="checkbox" /> DeepTrack</label><br />
+          <label><input type="checkbox" /> Evapore</label><br />
+          <label><input type="checkbox" /> Geisenheim</label><br />
+          <label><input type="checkbox" /> Greenberry</label><br />
+          <label><input type="checkbox" /> Grong Grong</label><br />
+          <label><input type="checkbox" /> Hajdusamson</label><br />
+          <label><input type="checkbox" /> Innoagri</label><br />
+          <label><input type="checkbox" /> Pacentro</label><br />
+          <label><input type="checkbox" /> Paterno</label><br />
+          <label><input type="checkbox" /> Riva Presso Chieri</label><br />
+          <label><input type="checkbox" /> Salice</label><br />
+          <label><input type="checkbox" /> San_Benigno</label><br />
+          <label><input type="checkbox" /> San Constanzo</label><br />
+          <label><input type="checkbox" /> Thiva</label><br />
+          <label><input type="checkbox" /> Tricerro</label><br />
+          <label><input type="checkbox" /> Veringenstadt</label><br />
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <h3>Channels</h3>
+        <input type="text" placeholder="Channels suchen..." class="modal-search" data-target="channels" />
+        <div class="scroll-list">
+          <label><input type="checkbox" /> Angle</label><br />
+          <label><input type="checkbox" /> Angle_Diff</label><br />
+          <label><input type="checkbox" /> Chip_Temp</label><br />
+          <label><input type="checkbox" /> Device_Type</label><br />
+          <label><input type="checkbox" /> Emergency_Stop</label><br />
+          <label><input type="checkbox" /> Emergency_Switch</label><br />
+          <label><input type="checkbox" /> Error_Flags</label><br />
+          <label><input type="checkbox" /> Firmware</label><br />
+          <label><input type="checkbox" /> Health_Errors</label><br />
+          <label><input type="checkbox" /> Health_Missed</label><br />
+          <label><input type="checkbox" /> Last_Angle</label><br />
+          <label><input type="checkbox" /> Meta_Cleaning</label><br />
+          <label><input type="checkbox" /> Meta_Monitoring</label><br />
+          <label><input type="checkbox" /> Meta_Serial</label><br />
+          <label><input type="checkbox" /> Motor_Current</label><br />
+          <label><input type="checkbox" /> Motor_Current_Max</label><br />
+          <label><input type="checkbox" /> Restarted</label><br />
+          <label><input type="checkbox" /> Rf_Errors</label><br />
+          <label><input type="checkbox" /> Rf_Hops</label><br />
+          <label><input type="checkbox" /> Rf_Latency</label><br />
+          <label><input type="checkbox" /> Rf_Retries</label><br />
+          <label><input type="checkbox" /> Rf_RSSI_dBm</label><br />
+          <label><input type="checkbox" /> Rf_Time_Ack</label><br />
+          <label><input type="checkbox" /> Rf_Time_Answer</label><br />
+          <label><input type="checkbox" /> Set_Angle</label><br />
+          <label><input type="checkbox" /> Set_Mode</label><br />
+          <label><input type="checkbox" /> Set_Motor_Control</label><br />
+          <label><input type="checkbox" /> Stuck</label><br />
+          <label><input type="checkbox" /> Supply_Voltage</label><br />
+          <label><input type="checkbox" /> Uptime</label><br />
+        </div>
+      </div>
+
+      <div class="modal-section narrow">
+        <h3>Zeitraum</h3>
+        <label>Startdatum:<br /><input type="date" id="startDate" /></label><br /><br />
+        <label>Enddatum:<br /><input type="date" id="endDate" /></label><br /><br />
+
+        <button id="confirmDownload" class="modal-download-btn">Download</button>
+        <button onclick="closeMultiDownload()" class="modal-close-btn">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="downloadModal" class="hidden modal-overlay">
+    <div class="modal-window" style="flex-direction: column; max-width: 300px;">
+      <h3>Download-Format wählen</h3>
+      <label><input type="radio" name="download-type" value="png" checked /> PNG (Bild)</label>
+      <label><input type="radio" name="download-type" value="csv" /> CSV (Werte)</label>
+      <br />
+      <button id="confirmDownloadBtn">Download</button>
+      <button onclick="closeDownloadModal()">Abbrechen</button>
+    </div>
+  </div>
+
+  <div id="addSelectionModal" class="hidden modal-overlay">
+    <div class="modal-window">
+      <div class="modal-section">
+        <h3>Anlagen</h3>
+        <input type="text" placeholder="Anlagen suchen..." class="modal-search" data-target="anlagen" />
+        <div id="addModalSites" class="scroll-list"></div>
+      </div>
+
+      <div class="modal-section">
+        <h3>Channels</h3>
+        <input type="text" placeholder="Channels suchen..." class="modal-search" data-target="channels" />
+        <div id="addModalChannels" class="scroll-list"></div>
+      </div>
+
+      <div class="modal-section narrow">
+        <h3>&nbsp;</h3>
+        <div style="flex:1"></div>
+        <button id="addSelectionConfirm" class="modal-download-btn">Hinzufügen</button>
+        <button id="addSelectionClose" class="modal-close-btn">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
